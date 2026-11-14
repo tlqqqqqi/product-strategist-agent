@@ -95,6 +95,14 @@ def write_jsonl(path: Path, rows: Iterable[dict]) -> None:
     tmp.replace(path)
 
 
+def load_config(name: str) -> dict:
+    """Read config/<name>.yaml. PyYAML is imported lazily so `strat state` stays stdlib-only."""
+    import yaml
+
+    path = root() / "config" / f"{name}.yaml"
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+
 def emit(text: str, data: Any = None, as_json: bool = False) -> None:
     """Print English text, or JSON when --json was given."""
     if as_json:
