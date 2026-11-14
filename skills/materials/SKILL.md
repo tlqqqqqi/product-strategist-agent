@@ -28,7 +28,7 @@ the header as row 1, as in the spreadsheet.
 - Before using a figure, state its unit, its period and the number of empty cells in its column
   (the snapshot lists them). A figure from a column with gaps says so.
 - A figure that needs a calculation goes through a script in `analysis/`, never by eye (see
-  `skills/research/SKILL.md`).
+  `skills/data-analysis/SKILL.md`).
 - Watch for mixed periods (month vs quarter), cumulative vs monthly values, and percentages vs
   percentage points.
 

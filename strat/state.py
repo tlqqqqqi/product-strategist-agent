@@ -110,6 +110,8 @@ def new_case(case_id: str, title: str, as_json: bool = False) -> int:
         raise StratError(f"case already exists: {case_id}")
     cases_dir().mkdir(parents=True, exist_ok=True)
     shutil.copytree(root() / "cases" / "_template", target)
+    for folder in ("materials", "sources", "analysis"):  # git keeps no empty folders
+        (target / folder).mkdir(exist_ok=True)
     try:
         limit = float(load_config("limits")["budget"]["default_limit_usd"])
     except Exception:

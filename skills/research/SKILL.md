@@ -20,8 +20,9 @@ is used anywhere. Read `knowledge/claims.md` if you have not in this session.
    Then save every page you use: `bin/strat read <url> --step research.q<N>.read.<k>`. Quote
    from the saved snapshot, never from a search snippet or a tool summary.
 3. Public product flows (tariff pages, sign-up screens up to the form): screenshots with
-   element boxes, `skills/ux-capture/SKILL.md`. Data scripts beyond simple calculations,
-   interviews and model respondents are not available in this version.
+   element boxes, `skills/ux-capture/SKILL.md`. Calculations on tables:
+   `skills/data-analysis/SKILL.md`. Interviews and model respondents are not available in this
+   version.
 
 ## For each question
 

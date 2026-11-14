@@ -54,7 +54,7 @@ def test_normalize_handles_nbsp():
 
 
 def test_analysis_output_stays_in_place_as_kind_analysis(strat, case):
-    (case / "analysis").mkdir()
+    (case / "analysis").mkdir(exist_ok=True)
     (case / "analysis" / "q1.txt").write_text("excess churn: 3050")
     r = strat("source", "add", "analysis/q1.txt", "--json")
     assert r.code == 0 and r.data["origin"] == "analysis/q1.txt"

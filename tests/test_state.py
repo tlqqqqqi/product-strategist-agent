@@ -18,6 +18,13 @@ def test_new_case_starts_at_intake(strat, cases):
     assert (cases / "demo" / "claims.jsonl").is_file()
 
 
+def test_new_case_has_the_working_folders(strat, cases):
+    """Skills write into these folders directly (e.g. `> analysis/q1_x.txt`)."""
+    assert strat("new", "folders", "--title", "T").code == 0
+    for d in ("materials", "sources", "analysis"):
+        assert (cases / "folders" / d).is_dir(), d
+
+
 def test_new_refuses_an_existing_case_and_a_bad_id(strat, cases):
     assert strat("new", "demo", "--title", "A").code == 0
     assert strat("new", "demo", "--title", "B").code == 1
