@@ -20,8 +20,15 @@ description: Use at stage gate3 or monitoring. Presents the strategies for sign-
 ## After sign-off
 
 1. **Decision record.** Copy `knowledge/templates/decision-record.md` to `decisions.md` (or add
-   a new "Решение" section if it exists). Fill the chosen option, the owner (a role), the metrics
-   and review conditions from `verification.md`, the check date, and the load-bearing claims.
+   a new "Решение" section below the old ones if it exists; the last one is the live decision).
+   Fill the chosen option, the owner (a role), the metrics and review conditions from
+   `verification.md`, the check date, and the load-bearing claims. Two parts are read by
+   `bin/strat review`, so keep their form:
+   - `- Дата проверки: ГГГГ-ММ-ДД` - an ISO date, never "в начале весны". Ask the user for
+     the date if the verification plan does not give one.
+   - Under `- Условия пересмотра:` one sub-bullet per condition, citing the claim it watches,
+     with `(проверить: ГГГГ-ММ-ДД)` when it has its own date. A condition fires on its date or
+     when its claim is contradicted, replaced, withdrawn or stale.
    `bin/strat step signoff.decision --out decisions.md`
 2. **Memo.** Copy `knowledge/templates/memo.md` to `memo.md`: one page for the recipient in the
    brief, every line cited. `bin/strat step signoff.memo --out memo.md --next "Monitoring: review the decision on its check date"`
@@ -31,9 +38,11 @@ description: Use at stage gate3 or monitoring. Presents the strategies for sign-
    (CLI calls only; the IDE model's own usage is not included). Before this report, run
    `bin/strat report` to render `memo.html` and follow `skills/report/SKILL.md`.
 
-## Later sessions at stage monitoring
+## Later sessions at stage monitoring or revision
 
-Say where the case stands and when the check date is. Automatic review of due items and
-revision on new material are not available in this version; if the user brings new material,
-register it, add claims, and tell the user which conclusions it touches
-(`bin/strat claim list --load-bearing`).
+- **Every session at stage monitoring:** follow `skills/review/SKILL.md`. `bin/strat state`
+  already lists what is due; `bin/strat review` gives the details and at most 3 questions.
+- **The user brings new material** (a fresh export, a report, a competitor's change), or the
+  stage is `revision`: follow `skills/revise/SKILL.md`. It starts with `bin/strat ingest <path>`.
+- You never rewrite a decision on your own: you propose, the user says yes, then you change
+  `decisions.md` and the documents.

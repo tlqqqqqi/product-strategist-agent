@@ -241,3 +241,19 @@ def test_session_start_hook_shows_due_items(decided, monkeypatch):
                           capture_output=True, text=True, env=env, timeout=30)
     assert proc.returncode == 0, proc.stderr
     assert "stage: monitoring" in proc.stdout and "check 2026-12-01" in proc.stdout
+
+
+def test_the_template_form_is_what_review_reads(strat, decided, monkeypatch):
+    template = (REPO / "knowledge" / "templates" / "decision-record.md").read_text()
+    filled = (template.replace("Решение <ГГГГ-ММ-ДД>", "Решение 2026-11-15")
+              .replace("Дата проверки: <ГГГГ-ММ-ДД>", "Дата проверки: 2026-12-01")
+              .replace("(проверить: <ГГГГ-ММ-ДД>)", "(проверить: 2027-01-15)")
+              .replace("[C...]", "[C001]"))
+    write(decided, "decisions.md", filled)
+    monkeypatch.setenv("STRAT_TODAY", "2026-12-02")
+    data = strat("review", "--json").data
+    assert data["decision"] == "Решение 2026-11-15: <коротко>"
+    assert [d["date"] for d in data["due"]] == ["2026-12-01"]
+    monkeypatch.setenv("STRAT_TODAY", "2027-01-16")  # C001 is stale by now: all conditions fire
+    conds = [d for d in strat("review", "--json").data["due"] if d["what"] == "condition"]
+    assert len(conds) == 3 and [d["date"] for d in conds] == [None, "2027-01-15", None]
