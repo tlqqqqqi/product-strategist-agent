@@ -22,7 +22,7 @@ from strat.core import (
 
 KINDS = ("keyword", "text", "semantic")
 STOP_AND_ASK = ("Do not retry: stop and ask the user how to proceed - add one key "
-                "(BRAVE_API_KEY, TAVILY_API_KEY or EXA_API_KEY) to .env, or let you use the IDE's "
+                "(BRAVE_API_KEY, TAVILY_API_KEY or EXA_API_KEY) to .env, or to let you use the IDE's "
                 "own web search tool and save each page with `strat read <url> --step ID`.")
 
 

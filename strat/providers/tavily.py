@@ -21,8 +21,8 @@ def search(query: str, kind: str, limit: int, api_key: str) -> list[dict]:
     out = []
     for item in providers.results_of(data, "tavily")[:limit]:
         row = {"title": providers.clean(item.get("title")), "url": item.get("url") or "",
-               "snippet": providers.clean(item.get("content"))}
-        if item.get("published_date"):
-            row["date"] = str(item["published_date"])[:10]
+               "snippet": providers.snippet(item.get("content"))}
+        if providers.iso_date(item.get("published_date")):
+            row["date"] = providers.iso_date(item.get("published_date"))
         out.append(row)
     return out

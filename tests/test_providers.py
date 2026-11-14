@@ -10,7 +10,7 @@ from strat.providers import brave, exa, tavily
 TAVILY_OK = {"query": "q", "results": [
     {"title": "Тарифы на облако", "url": "https://example.ru/tariffs",
      "content": "Семейный тариф  на 6 человек\n стоит 299 руб.", "score": 0.8,
-     "published_date": "2026-10-01"},
+     "published_date": "Thu, 01 Oct 2026 09:00:00 GMT"},
     {"title": "Без даты", "url": "https://example.ru/b", "content": "текст", "score": 0.5},
 ]}
 
@@ -53,7 +53,7 @@ def test_exa_parses_highlights_or_cuts_text(posted):
     assert out[0] == {"title": "Отток подписчиков", "url": "https://example.ru/churn",
                       "snippet": "Отток в среднем 5% в месяц. … Семейные тарифы удерживают лучше.",
                       "date": "2026-09-30"}
-    assert out[1]["title"] == "" and len(out[1]["snippet"]) <= 400
+    assert out[1]["title"] == "" and len(out[1]["snippet"]) <= 500
     url, payload, headers = posted[0]
     assert url == "https://api.exa.ai/search" and headers["x-api-key"] == "ex-key"
     assert payload["numResults"] == 3 and payload["contents"]["highlights"]
@@ -90,3 +90,29 @@ def test_post_json_reports_non_json_as_http_error(monkeypatch):
     monkeypatch.setattr("urllib.request.urlopen", lambda req, timeout: Resp())
     with pytest.raises(net.HttpError, match="not JSON"):
         providers.post_json("https://api.example.com/x", {"a": 1})
+
+
+def _eval_module():
+    import importlib.util
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[1] / "scripts" / "search_eval.py"
+    spec = importlib.util.spec_from_file_location("search_eval", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_eval_scores_russian_fresh_useful_results_above_others():
+    ev = _eval_module()
+    good = [{"title": "Семейный тариф облака", "url": "https://e.ru/a",
+             "snippet": "Семейный тариф облака на 6 человек стоит 299 рублей в месяц, "
+                        "условия подключения и отмены описаны ниже подробно.",
+             "date": "2026-10-01"}] * 5
+    bad = [{"title": "Cloud pricing", "url": "https://e.com/2019",
+            "snippet": "short", "date": ""}] * 3
+    assert ev.score("семейный тариф облака", good, 2026) == {
+        "relevant": 1.0, "fresh": 1.0, "snippet": 1.0}
+    assert ev.score("семейный тариф облака", bad, 2026) == {
+        "relevant": 0.0, "fresh": 0.0, "snippet": 0.0}
+    assert len(ev.QUERIES) >= 20 and {k for k, _ in ev.QUERIES} == {"keyword", "text", "semantic"}

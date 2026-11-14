@@ -11,10 +11,13 @@ import json
 import re
 import urllib.error
 import urllib.request
+from datetime import datetime
+from email.utils import parsedate_to_datetime
 
 from strat import net
 
 CYRILLIC = re.compile(r"[Ѐ-ӿ]")
+SNIPPET_CHARS = 500
 
 
 def post_json(url: str, payload: dict, headers: dict | None = None, timeout: int = 30) -> dict:
@@ -46,3 +49,22 @@ def results_of(data, provider: str) -> list[dict]:
 
 def clean(text: str | None) -> str:
     return " ".join((text or "").split())
+
+
+def snippet(text: str | None) -> str:
+    return clean(text)[:SNIPPET_CHARS]
+
+
+def iso_date(value) -> str | None:
+    """YYYY-MM-DD from an ISO or an RFC 2822 date string; None when it cannot be read."""
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00")).date().isoformat()
+    except ValueError:
+        pass
+    try:
+        return parsedate_to_datetime(text).date().isoformat()
+    except (TypeError, ValueError):
+        return None

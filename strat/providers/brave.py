@@ -29,7 +29,7 @@ def search(query: str, kind: str, limit: int, api_key: str) -> list[dict]:
     for item in (data.get("web") or {}).get("results", [])[:limit]:
         snippet = " ".join(_TAG.sub("", item.get("description") or "").split())
         row = {"title": item.get("title", ""), "url": item.get("url", ""), "snippet": snippet}
-        if item.get("page_age"):
-            row["date"] = str(item["page_age"])[:10]
+        if providers.iso_date(item.get("page_age")):
+            row["date"] = providers.iso_date(item.get("page_age"))
         out.append(row)
     return out
