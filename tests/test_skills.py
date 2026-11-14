@@ -8,7 +8,7 @@ from conftest import REPO
 from strat.cli import COMMANDS
 
 SKILLS = ["using-strategist", "intake", "plan", "research", "materials", "options", "strategy",
-          "signoff", "report", "ux-capture", "data-analysis", "review", "revise", "media"]
+          "signoff", "report", "ux-capture", "data-analysis", "review", "revise", "media", "challenge"]
 TEMPLATES = ["brief", "plan", "table", "options", "product", "comms", "verification",
              "decision-record", "memo"]
 KNOWLEDGE = ["INDEX", "claims", "case-types", "product-strategy", "comms-strategy",
