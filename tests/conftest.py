@@ -32,6 +32,7 @@ def cases(tmp_path, monkeypatch):
     for key in ("BRAVE_API_KEY", "TAVILY_API_KEY", "EXA_API_KEY"):
         monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv("STRAT_ENV_FILE", str(tmp_path / "no.env"))  # never the real .env
+    monkeypatch.setenv("STRAT_TRANSCRIPTS", str(tmp_path / "no-transcripts"))
 
     def no_network(*a, **k):
         raise AssertionError("tests must not use the network")
