@@ -45,7 +45,15 @@ ask which answers could change their ranking.
   say so.
 - Log: `bin/strat step plan.plan --out plan.md`
 
-## 4. Gate 1
+## 4. Challenger on the draft options
+
+Run `bin/strat consult variants` and follow `skills/challenge/SKILL.md`: the challenger, a model
+from another vendor that sees only brief.md, table.md and options.md, looks for a missing
+option, the best case for "keep as is" and "close", and rewordings. Set a verdict on every
+objection (`bin/strat consult verdict`); change `options.md` and `table.md` for the accepted
+ones. The gate check fails while any objection has no verdict.
+
+## 5. Gate 1
 
 1. Run `bin/strat gate check 1`. Fix every reported line and rerun until it passes. Passing
    moves the stage to `gate1`.
@@ -54,6 +62,8 @@ ask which answers could change their ranking.
    - the draft options, one line each;
    - the top research questions with the cell each can flip;
    - the cost and time estimate;
+   - the challenger's objections (`bin/strat consult list`): what you accepted, what you
+     rejected and why, and any open one; say if the challenger was same-vendor;
    - the assumptions the user should confirm.
 3. Ask: "Утверждаете план? Можно поправить любой пункт." Then stop and wait.
 
