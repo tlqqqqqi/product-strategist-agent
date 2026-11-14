@@ -170,6 +170,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("question", choices=["type", "support", "contradiction", "sufficient"])
     p.add_argument("--claim", default=None)
     p.add_argument("--other", default=None)
+    p.add_argument("--answer", default=None,
+                   help="record the IDE agent's own answer (stored with by=agent)")
     p.set_defaults(target="judge")
 
     p = _cmd(sub, "consult", "challenger call, writes objections.jsonl")
