@@ -13,6 +13,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+browser = ["playwright>=1.49"]
 
 [project.scripts]
 strat = "strat.cli:main"
