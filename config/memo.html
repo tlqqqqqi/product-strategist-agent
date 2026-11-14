@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>{{TITLE}}</title>
+<style>
+:root {
+  --bg: #fbfaf7; --fg: #1d1c1a; --muted: #6b675f; --line: #e3dfd6; --card: #ffffff;
+  --accent: #1f5fa8; --accent-bg: #e8f0fa;
+  --fact: #2f6b3a; --fact-bg: #e6f2e7;
+  --soft: #8a5a00; --soft-bg: #fbf0d9;
+  --warn: #9b2c2c; --warn-bg: #fbe5e3;
+  --concl: #5a3e8c; --concl-bg: #efe9f8;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161514; --fg: #ebe8e2; --muted: #a29d93; --line: #34312d; --card: #1f1e1c;
+    --accent: #8ab8ec; --accent-bg: #1d2a3a;
+    --fact: #8fd19b; --fact-bg: #1c2c1f;
+    --soft: #e8c06f; --soft-bg: #33290f;
+    --warn: #f2a19a; --warn-bg: #3a1e1c;
+    --concl: #c6b0ef; --concl-bg: #2a2238;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+main { max-width: 46rem; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 1.6rem; line-height: 1.25; margin: 0 0 12px; }
+h2 { font-size: 1.15rem; margin: 32px 0 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+h3 { font-size: 1rem; margin: 20px 0 6px; }
+p, ul, ol { margin: 0 0 12px; }
+ul, ol { padding-left: 1.25rem; }
+li { margin: 4px 0; }
+a { color: var(--accent); }
+blockquote { margin: 0 0 12px; padding: 8px 12px; border-left: 3px solid var(--line); color: var(--muted); }
+blockquote p { margin: 0; }
+code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9em; }
+pre { overflow-x: auto; padding: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 6px; }
+.table-wrap { overflow-x: auto; margin: 0 0 12px; }
+table { border-collapse: collapse; width: 100%; font-size: .95rem; }
+th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 600; }
+.meta { color: var(--muted); font-size: .9rem; margin: 0 0 16px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; padding: 0; list-style: none; font-size: .85rem; }
+.cites { white-space: normal; }
+a.cite {
+  text-decoration: none; border-radius: 4px; padding: 0 3px; font-size: .85em; font-weight: 600;
+  background: var(--accent-bg); color: var(--accent); white-space: nowrap;
+}
+a.cite:hover, a.cite:focus-visible { text-decoration: underline; }
+.tag { font-weight: 600; border-radius: 4px; padding: 0 4px; font-size: .8em; white-space: nowrap; }
+.t-fact .tag, .tag.t-fact { background: var(--fact-bg); color: var(--fact); }
+.t-hypothesis .tag, .tag.t-hypothesis, .t-forecast .tag, .tag.t-forecast,
+.t-assumption .tag, .tag.t-assumption { background: var(--soft-bg); color: var(--soft); }
+.t-gap .tag, .tag.t-gap, .t-synthetic .tag, .tag.t-synthetic { background: var(--warn-bg); color: var(--warn); }
+.t-conclusion .tag, .tag.t-conclusion { background: var(--concl-bg); color: var(--concl); }
+a.cite .tag { margin-left: 3px; }
+#claims { margin-top: 40px; }
+.claim {
+  background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+  padding: 12px 14px; margin: 0 0 12px; scroll-margin-top: 12px;
+}
+.claim:target { outline: 2px solid var(--accent); }
+.claim header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; margin-bottom: 6px; }
+.cid { font-weight: 700; }
+.status { color: var(--muted); font-size: .85rem; }
+.status.bad { color: var(--warn); }
+.ctext { margin: 0 0 8px; }
+.note { color: var(--muted); font-size: .88rem; margin: 0 0 8px; }
+dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; font-size: .92rem; }
+dt { color: var(--muted); }
+dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+dd blockquote { margin: 0; padding: 2px 10px; }
+@media (max-width: 520px) {
+  dl { grid-template-columns: 1fr; gap: 0; }
+  dd { margin-bottom: 6px; }
+}
+dialog {
+  width: min(42rem, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--fg);
+}
+dialog::backdrop { background: rgba(0, 0, 0, .45); }
+dialog .claim { border: 0; margin: 0; }
+dialog .bar { display: flex; justify-content: flex-end; padding: 8px 10px 0; }
+dialog button {
+  font: inherit; font-size: .9rem; padding: 4px 12px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--bg); color: var(--fg);
+}
+footer { margin-top: 32px; color: var(--muted); font-size: .85rem; }
+@media print { dialog, .legend { display: none; } a.cite { background: none; } }
+</style>
+</head>
+<body>
+<main>
+{{BODY}}
+<section id="claims" aria-labelledby="claims-h">
+<h2 id="claims-h">Утверждения, на которые ссылается записка</h2>
+<p class="meta">{{SUMMARY}} Нажмите на номер утверждения в тексте, чтобы открыть его карточку: тип, статус, источник, место в источнике и цитату.</p>
+<ul class="legend">{{LEGEND}}</ul>
+{{CLAIMS}}
+</section>
+<footer>Собрано командой <code>strat report</code> {{GENERATED}} из memo.md, claims.jsonl и sources/index.jsonl. Работает без интернета.</footer>
+</main>
+<dialog id="card" aria-label="Утверждение">
+<div class="bar"><button type="button" id="card-close">Закрыть</button></div>
+<div id="card-body"></div>
+</dialog>
+<script>
+(function () {
+  var dlg = document.getElementById("card");
+  if (!dlg || typeof dlg.showModal !== "function") return;
+  var body = document.getElementById("card-body");
+  function open(id) {
+    var src = document.getElementById(id);
+    if (!src || !src.classList.contains("claim")) return false;
+    var copy = src.cloneNode(true);
+    copy.removeAttribute("id");
+    body.replaceChildren(copy);
+    if (!dlg.open) dlg.showModal();
+    return true;
+  }
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest('a[href^="#C"]');
+    if (a && open(a.getAttribute("href").slice(1))) e.preventDefault();
+  });
+  document.getElementById("card-close").addEventListener("click", function () { dlg.close(); });
+  dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
+})();
+</script>
+</body>
+</html>
