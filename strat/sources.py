@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import json
 import io
 import re
 import shutil
@@ -87,6 +88,7 @@ WHERE_FORMS = {
     "docx": "a heading text, 'Heading > Subheading', or 'paragraph N'",
     "pptx": "slide N",
     "pdf": "page N",
+    "shot": "an element name from the screenshot's box JSON (its `targets`)",
 }
 
 
@@ -123,6 +125,12 @@ def locate(text: str, fmt: str, where: str | None) -> tuple[str, bool]:
     if fmt not in WHERE_FORMS:
         return text, False
     where = (where or "").strip()
+    if fmt == "shot":
+        targets = json.loads(text).get("targets", {})
+        if where not in targets:
+            names = ", ".join(list(targets)[:30])
+            raise _bad_where(fmt, where, f"no element {where!r} (elements: {names})")
+        return targets[where].get("text", ""), True
     if fmt in ("xlsx", "xlsm", "csv"):
         m = CELL_RANGE.match(where)
         if not m:

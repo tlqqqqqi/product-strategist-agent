@@ -70,3 +70,25 @@ def test_text_addressed_to_ai_is_flagged(strat, case):
     assert "instructions" not in text
     out = strat("read", str(case / "materials" / "competitor.html"), "--step", "r1").out
     assert "addressed to AI" in out and "tell the user" in out
+
+
+def test_shot_quote_is_checked_inside_the_named_element(strat, case):
+    """For a screenshot source, --where names an element; a quote from another element of the
+    same screenshot is refused (spec, Sources: "For shot, where names an element")."""
+    from strat.sources import register, sha256
+
+    doc = {"url": "https://example.org/plans", "viewport": [1280, 800], "targets": {
+        "family_price": {"box": [10, 20, 300, 40], "text": "Семья: 1 ТБ — 249 ₽ в месяц"},
+        "solo_price": {"box": [10, 80, 300, 40], "text": "Для себя: 199 ₽ в месяц"}}}
+    register(case, kind="shot", origin="shots/cloud/01_plans.png", title="plans",
+             text=json.dumps(doc, ensure_ascii=False), digest=sha256(b"png"), fmt="shot")
+    base = ["claim", "add", "--type", "fact", "--kind", "price", "--source", "S001",
+            "--as-of", "2026-11"]
+    ok = strat(*base, "--text", "Семейный тариф стоит 249 ₽ в месяц",
+               "--where", "family_price", "--quote", "249 ₽ в месяц")
+    assert ok.code == 0, ok.err
+    other = strat(*base, "--text", "Семейный тариф стоит 199 ₽ в месяц",
+                  "--where", "family_price", "--quote", "199 ₽ в месяц")
+    assert other.code == 1
+    missing = strat(*base, "--text", "x 249", "--where", "header", "--quote", "249")
+    assert missing.code == 1 and "family_price" in missing.err

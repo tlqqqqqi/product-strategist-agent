@@ -116,12 +116,9 @@ def refuse_reason(el: dict) -> str | None:
 
 def locate_shot(text: str, where: str | None) -> str:
     """The text of the element `where` names in a shot's box JSON (the quote check region)."""
-    targets = json.loads(text).get("targets", {})
-    if not where or where not in targets:
-        names = ", ".join(list(targets)[:30])
-        raise StratError(f"bad --where {where!r} for a shot source: no element {where!r}; "
-                         f"elements: {names}")
-    return targets[where].get("text", "")
+    from strat.sources import locate
+
+    return locate(text, "shot", where)[0]
 
 
 def load_plan(path: str | None) -> list[dict] | None:
