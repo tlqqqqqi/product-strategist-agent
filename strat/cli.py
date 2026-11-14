@@ -157,7 +157,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = _cmd(sub, "capture", "walk a public flow into shots/, never submits")
     p.add_argument("url")
     p.add_argument("--flow", required=True)
-    p.add_argument("--steps", type=int, default=5)
+    p.add_argument("--steps", type=int, default=5,
+                   help="most steps to capture (screens of one page when there is no --plan)")
+    p.add_argument("--plan", default=None, help="JSON or YAML file: steps with click/goto/targets")
+    p.add_argument("--step", default=None, help="log step id (default capture.<flow>)")
     p.set_defaults(target="capture")
 
     p = _cmd(sub, "media", "audio or video into sources")
