@@ -65,12 +65,14 @@ def find_ok(cdir: Path, step: str) -> dict | None:
 
 def log_action(cdir: Path, *, step: str, tool: str, stage: str | None = None, in_: str = "",
                out: str = "", tokens_in: int = 0, tokens_out: int = 0, usd: float = 0.0,
-               status: str = "ok", note: str = "", sec: float = 0.0) -> dict:
+               status: str = "ok", note: str = "", sec: float = 0.0, ref: str = "") -> dict:
     """Append one log line and add its cost to the budget. Call after the output is written."""
     state = load(cdir)
     row = {"step": step, "ts": now(), "stage": stage or state["stage"], "tool": tool,
            "in": in_, "out": out, "tokens_in": tokens_in, "tokens_out": tokens_out,
            "usd": round(usd, 6), "status": status, "note": note, "sec": round(sec, 3)}
+    if ref:
+        row["ref"] = ref  # the id this step created (S or C id), returned on replay
     append_jsonl(cdir / "log.jsonl", row)
     if usd:
         state["budget"]["spent_usd"] = round(state["budget"]["spent_usd"] + usd, 6)
@@ -85,9 +87,10 @@ def replay(cdir: Path, step: str | None, as_json: bool) -> bool:
     row = find_ok(cdir, step)
     if row is None:
         return False
-    emit(f"step {step} already done ({row['ts']}): {row['out']}\n{row['note']}".rstrip(),
+    ref = row.get("ref", "")
+    emit(f"step {step} already done ({row['ts']}): {ref} {row['out']}\n{row['note']}".strip(),
          {"replayed": True, "step": step, "out": row["out"], "note": row["note"],
-          "id": row.get("id")}, as_json)
+          "id": ref or None}, as_json)
     return True
 
 
