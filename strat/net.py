@@ -1,5 +1,5 @@
-"""The one HTTP helper. GET for pages and search APIs; POST only for JSON calls to model APIs
-(strat/models.py). The CLI never submits a web form. Tests replace `get` and `post`."""
+"""The one HTTP helper. GET for pages and search APIs; POST only for JSON calls to model and
+search APIs (strat/models.py, strat/providers). The CLI never submits a web form. Tests replace `get` and `post`."""
 
 from __future__ import annotations
 
@@ -35,14 +35,18 @@ def get(url: str, headers: dict | None = None, timeout: int = 30,
         raise HttpError(f"{url}: {getattr(exc, 'reason', exc)}") from None
 
 
-def post(url: str, body: bytes, headers: dict | None = None,
-         timeout: int = 30) -> tuple[int, dict, bytes]:
-    """POST a JSON body to an API; same return and errors as `get`. Never used for web forms."""
+def post(url: str, body: bytes, headers: dict | None = None, timeout: int = 30,
+         max_bytes: int = MAX_BYTES) -> tuple[int, dict, bytes]:
+    """POST a JSON body to an API (model APIs and the Tavily and Exa search APIs); same return
+    and errors as `get`. Never used for web forms."""
     req = urllib.request.Request(url, data=body, method="POST", headers={
         "User-Agent": USER_AGENT, "Content-Type": "application/json", **(headers or {})})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.status, {k.lower(): v for k, v in resp.headers.items()}, resp.read()
+            body = resp.read(max_bytes + 1)
+            if len(body) > max_bytes:
+                raise HttpError(f"{url}: larger than {max_bytes} bytes")
+            return resp.status, {k.lower(): v for k, v in resp.headers.items()}, body
     except urllib.error.HTTPError as exc:
         detail = exc.read(500).decode("utf-8", "replace")
         raise HttpError(f"HTTP {exc.code} for {url}: {detail}", exc.code) from None

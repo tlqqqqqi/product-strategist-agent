@@ -2,15 +2,13 @@
 search(query, kind, limit, api_key) -> list of dicts with title, url, snippet and, when the
 provider gives one, date (YYYY-MM-DD). A provider failure raises net.HttpError.
 
-Tavily and Exa take a JSON body, so they go through post_json below: a POST to a search API
+Tavily and Exa take a JSON body, so they go through post_json below (net.post): a POST to a search API
 endpoint, never to a page or a form. Tests replace post_json, as they replace net.get."""
 
 from __future__ import annotations
 
 import json
 import re
-import urllib.error
-import urllib.request
 from datetime import datetime
 from email.utils import parsedate_to_datetime
 
@@ -21,18 +19,10 @@ SNIPPET_CHARS = 500
 
 
 def post_json(url: str, payload: dict, headers: dict | None = None, timeout: int = 30) -> dict:
-    """POST a JSON body to an API endpoint and return the decoded JSON reply."""
-    req = urllib.request.Request(
-        url, data=json.dumps(payload).encode(), method="POST",
-        headers={"User-Agent": net.USER_AGENT, "Content-Type": "application/json",
-                 "Accept": "application/json", **(headers or {})})
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            body = resp.read(net.MAX_BYTES)
-    except urllib.error.HTTPError as exc:
-        raise net.HttpError(f"HTTP {exc.code} for {url}") from None
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise net.HttpError(f"{url}: {getattr(exc, 'reason', exc)}") from None
+    """POST a JSON body to a search API endpoint (through net.post) and decode the JSON reply."""
+    _, _, body = net.post(url, json.dumps(payload).encode(),
+                          headers={"Accept": "application/json", **(headers or {})},
+                          timeout=timeout)
     try:
         return json.loads(body)
     except ValueError:

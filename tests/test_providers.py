@@ -77,6 +77,7 @@ def test_response_without_results_list_is_a_provider_failure(monkeypatch, module
 def test_post_json_reports_non_json_as_http_error(monkeypatch):
     class Resp:
         status = 200
+        headers = {"Content-Type": "text/html"}
 
         def read(self, n=-1):
             return b"<html>"
