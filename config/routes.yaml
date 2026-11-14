@@ -1,4 +1,4 @@
-# Fixed routing per step. Phase 1 uses only search; models and judge come in Phase 2.
+# Fixed routing per step: search providers, outside models and small judgments.
 search:
   # One provider per call by kind, falling through on failure; brave is always the last
   # fallback (strat/search.py moves it to the end whatever is written here).
@@ -19,3 +19,42 @@ search:
     brave: 0.005
     tavily: 0.008
     exa: 0.007
+
+# Outside models, called by strat/models.py (one OpenAI-compatible client). Endpoints and keys
+# come from .env: STRAT_<ROLE>_BASE_URL, STRAT_<ROLE>_API_KEY, STRAT_<ROLE>_MODEL.
+models:
+  timeout_sec: 120
+  retries: 1            # one retry, only after a timeout, a network error, 429 or 5xx
+  # USD per 1M tokens, one flat rate for input and output. AnyModel prices a model as its base
+  # rate (5 cents per 1M tokens) times the model's coefficient (anymodel.org/en/models/jev-1-14:
+  # x10 = 0.50; /laya-multilingual: x20 = 1.00; GET /v1/models: ds/deepseek-v4-flash x0.25).
+  # Read 2026-11-14.
+  usd_per_mtok:
+    jev/jev-1.14.0: 0.50
+    jev/laya-multilingual: 1.00
+    ds/deepseek-v4-flash: 0.0125
+  # A model not listed above is logged with this rate and marked "estimate" in the log note.
+  default_usd_per_mtok: 2.00
+
+# strat judge: typed questions (type, support, contradiction, sufficient).
+# Order: Jev (STRAT_JEV_*), then a cheap chat model on the peer endpoint (STRAT_PEER_*) with a
+# fixed answer format, then the IDE agent itself (exit 3, the answer is stored with by=agent).
+judge:
+  # Jev model: jev/jev-1.14.0, pinned so verdicts do not move between runs. Chosen over
+  # jev/laya-multilingual by a live run on 2026-11-14: the same 5 Russian questions on the
+  # sample case (support yes, support with a wrong price, contradiction, type of a hypothesis,
+  # sufficiency of one survey figure for a conclusion). jev-1.14.0 answered all 5 as expected
+  # with p 0.94-0.97 (or 0.01-0.10 for "no"). laya-multilingual said a claim of 399 RUB is
+  # supported by a quote of 349 RUB with p=0.93 (a confident wrong yes), and fell to 0.20 on the
+  # type question. laya also refuses anything over 1,024 tokens. Both cost well under 0.001 USD
+  # per question. STRAT_JEV_MODEL in .env overrides this value.
+  jev_model: jev/jev-1.14.0
+  # Below this calibrated probability Jev's answer escalates to the main model (the IDE agent).
+  # About 0.8, after the Jev paper's suggested cut-off for "is the evidence sufficient".
+  threshold: 0.8
+  # Chat fallback on the peer endpoint: a cheap model, since the judge needs one word back, not
+  # the challenger's strong model. Empty means STRAT_PEER_MODEL. One of the cheapest paid chat
+  # models in AnyModel's catalog on 2026-11-14 (x0.25); the free am/* routes were skipped as
+  # less predictable for availability.
+  chat_model: ds/deepseek-v4-flash
+  chat_max_tokens: 800  # room for a reasoning model to think before the one answer line

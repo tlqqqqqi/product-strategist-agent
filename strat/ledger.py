@@ -281,13 +281,26 @@ def check(claim_id: str | None = None, case: str | None = None, all_: bool = Fal
                 ok = False
             c["check"]["quote"] = ok
             failed += not ok
-        results.append({"id": c["id"], "quote": c["check"]["quote"],
-                        "supported": c["check"]["supported"], "by": c["check"]["by"]})
+        row = {"id": c["id"], "quote": c["check"]["quote"],
+               "supported": c["check"]["supported"], "by": c["check"]["by"]}
+        if c["check"].get("judgments"):  # stored by `strat judge`
+            row.update(p=c["check"].get("p"), judgments=c["check"]["judgments"])
+        results.append(row)
     save(cdir, claims)
-    lines = [f"{r['id']}: quote {'ok' if r['quote'] else 'FAILED' if r['quote'] is False else '-'}"
-             for r in results]
-    lines.append("support judgment: no judge in this version; read the quote against the "
-                 "claim yourself and report it as your own assessment")
+    lines = []
+    for r in results:
+        sup = {True: "yes", False: "no"}.get(r["supported"], "-")
+        lines.append(f"{r['id']}: quote {'ok' if r['quote'] else 'FAILED' if r['quote'] is False else '-'}"
+                     f", supported {sup}" + (f" (by {r['by']}"
+                                             + (f", p={r['p']}" if r.get("p") is not None else "")
+                                             + ")" if r["by"] else ""))
+        for j in r.get("judgments", []):
+            lines.append(f"  {j['question']}{' vs ' + j['other'] if j.get('other') else ''}: "
+                         f"{j['answer'] or '-'} by {j['by']}"
+                         + (f", p={j['p']}" if j.get("p") is not None else "")
+                         + (", escalated" if j.get("escalated") else ""))
+    lines.append("support judgment: `strat judge support --claim <id>` (Jev, then the peer "
+                 "model, else you answer); a model's judgment is its assessment, not a fact")
     emit("\n".join(lines), {"results": results, "failed": failed}, as_json)
     return 1 if failed else 0
 
