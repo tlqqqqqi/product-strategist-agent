@@ -1,0 +1,4 @@
+month,d30_retention_pct,note
+2026-09,41.0,
+2026-10,40.1,export fixed: duplicate churn events removed
+2026-11,40.6,

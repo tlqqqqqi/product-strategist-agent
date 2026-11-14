@@ -186,15 +186,18 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("objection_id")
     p.set_defaults(target="debate")
 
-    p = _cmd(sub, "ingest", "register new material after a decision")
+    p = _cmd(sub, "ingest", "register new material after a decision; case moves to revision")
     p.add_argument("path")
+    p.add_argument("--title", default=None)
+    p.add_argument("--step", default=None, help="log step id (default ingest.<S id>)")
     p.set_defaults(target="ingest")
 
-    p = _cmd(sub, "impact", "lines and documents that depend on a claim")
+    p = _cmd(sub, "impact", "conclusions and document lines that depend on a claim")
     p.add_argument("claim_id")
     p.set_defaults(target="impact")
 
-    p = _cmd(sub, "review", "due checks, fired review conditions, stale load-bearing claims")
+    p = _cmd(sub, "review", "due checks, fired review conditions, stale and contradicted "
+                            "load-bearing claims; at most 3 questions")
     p.set_defaults(target="review")
 
     p = _cmd(sub, "cost", "time and money by stage")
