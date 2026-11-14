@@ -138,7 +138,8 @@ def show(case: str | None = None, as_json: bool = False) -> int:
     state = load(cdir)
     done = [r for r in read_jsonl(cdir / "log.jsonl") if r.get("status") == "ok"]
     last = done[-1] if done else None
-    data = dict(state, last_step=last, recent_steps=[r["step"] for r in done[-8:]], due=[],
+    due, due_note = _due(cdir, state)
+    data = dict(state, last_step=last, recent_steps=[r["step"] for r in done[-8:]], due=due,
                 path=str(cdir))
     gates = ", ".join(f"{n} {v}" for n, v in state["gates"].items())
     b = state["budget"]
@@ -149,9 +150,27 @@ def show(case: str | None = None, as_json: bool = False) -> int:
              f"next: {state.get('next') or '-'}",
              f"budget: ${b['spent_usd']:.2f} of ${b['limit_usd']:.2f} (CLI calls only)",
              "steps done (latest last): " + (", ".join(data["recent_steps"]) or "none"),
-             "due: nothing (review is not available in this version)"]
+             due_note]
+    lines += [f"  - {d['what']}{' ' + d['date'] if d.get('date') else ''}: {d['text']} "
+              f"({d['reason']})" for d in due]
     emit("\n".join(lines), data, as_json)
     return 0
+
+
+def _due(cdir: Path, state: dict) -> tuple[list[dict], str]:
+    """Due items for a case after sign-off; never breaks `strat state`."""
+    if state["stage"] not in ("monitoring", "revision"):
+        return [], "due: nothing (checked after sign-off, at stage monitoring)"
+    try:
+        from strat.review import due_for_state
+
+        due = due_for_state(cdir)
+    except Exception as exc:  # the hook must still print the state
+        return [], f"due: not computed ({type(exc).__name__}); run bin/strat review"
+    if not due:
+        return [], "due: nothing"
+    n = sum(d["what"] != "note" for d in due)
+    return due, f"due ({n}; details and at most 3 questions: bin/strat review):"
 
 
 def step(step_id: str, case: str | None = None, stage: str | None = None, out: str | None = None,
