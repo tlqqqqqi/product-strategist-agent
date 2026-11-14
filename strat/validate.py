@@ -17,7 +17,7 @@ from strat.core import FAILED, StratError, case_path, emit, read_jsonl, root
 from strat.state import load as load_state
 from strat.state import save as save_state
 
-CHECKED = {"options.md", "product.md", "comms.md", "verification.md", "memo.md"}
+CHECKED = {"table.md", "options.md", "product.md", "comms.md", "verification.md", "memo.md"}
 TEMPLATE_OF = {"brief.md": "brief", "plan.md": "plan", "table.md": "table",
                "options.md": "options", "product.md": "product", "comms.md": "comms",
                "verification.md": "verification", "memo.md": "memo"}

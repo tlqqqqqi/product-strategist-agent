@@ -165,6 +165,22 @@ def test_uncited_bullet_fails_and_names_the_line(strat, ready):
     assert stage(ready) == "intake"
 
 
+def test_uncited_decision_table_row_fails_gate1(strat, ready):
+    edit(ready, "table.md", "| Отток | высокий [C001] | - [C003] | ниже? [C002] |",
+         "| Отток | высокий | - | ниже? |")
+    r = strat("gate", "check", "1")
+    n = line_of(ready, "table.md", "| Отток | высокий |")
+    assert r.code == 1 and f"table.md:{n}: no citation" in r.err
+    assert "| Критерий |" not in r.err  # header and separator rows stay exempt
+    assert stage(ready) == "intake"
+
+
+def test_step_out_checks_table_citations(strat, ready):
+    edit(ready, "table.md", "| Q1 | откат x отток | - [C003] | нет |", "| Q1 | откат x отток | - | нет |")
+    r = strat("step", "plan.table", "--out", "table.md")
+    assert r.code != 0 and "table.md:" in r.err and "no citation" in r.err
+
+
 def test_uncited_paragraph_and_table_row_fail(strat, ready):
     edit(ready, "options.md", "> Рекомендация будет после исследования.",
          "Пока рекомендуем откатить цену.")

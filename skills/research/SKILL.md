@@ -40,7 +40,9 @@ is used anywhere. Read `knowledge/claims.md` if you have not in this session.
 3. Compare sources. When two sources disagree, record both, then a `conclusion` or a `gap` that
    says which you trust and why.
 4. Update `table.md`: the cell's estimate and claims, and the "Влияние исследования" row with
-   "Изменил ранжирование: да/нет". Mark the question done in `plan.md` (`- [x]`).
+   "Изменил ранжирование: да/нет". Mark the question done in `plan.md` (`- [x]`). Every
+   data row keeps at least one claim id (the check enforces it); a cell still unknown cites a
+   `gap` claim.
 5. Log: `bin/strat step research.q<N>.done --out table.md --next "<the next question or options>"`.
 6. Apply the stop rule. Unanswered questions become `gap` claims cited in `plan.md`.
 

@@ -23,7 +23,10 @@ ask which answers could change their ranking.
 - Copy `knowledge/templates/table.md`. Criteria come from the brief's goal and the case type
   (`knowledge/case-types.md`); 3 to 5 criteria.
 - Each cell: a short estimate and the claims behind it, or a `gap` claim when unknown.
-- The "Влияние исследования" table starts with one row per planned question, answer `-`.
+- The "Влияние исследования" table starts with one row per planned question, answer `-` plus
+  the `gap` claim that names what the question will find out (`- [C007]`).
+- `strat step --out table.md` and `strat gate check 1` reject any criteria bullet or table data
+  row without a claim id, as in `options.md`. Header and separator rows are exempt.
 - Log: `bin/strat step plan.table --out table.md`
 
 ## 3. Research questions -> plan.md
