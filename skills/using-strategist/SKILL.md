@@ -30,7 +30,8 @@ strategy, a communication strategy and a verification plan. The user decides; yo
 | `gate2` | `skills/options/SKILL.md`, section "Gate 2" - present and wait |
 | `strategy` | `skills/strategy/SKILL.md` |
 | `gate3` | `skills/signoff/SKILL.md`, section "Gate 3" - present and wait |
-| `monitoring` | `skills/signoff/SKILL.md`, section "After sign-off" |
+| `monitoring` | `skills/review/SKILL.md` (new material from the user: `skills/revise/SKILL.md`) |
+| `revision` | `skills/revise/SKILL.md` |
 
 Skills for a task at any stage:
 
