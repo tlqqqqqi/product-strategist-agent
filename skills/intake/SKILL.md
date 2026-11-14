@@ -42,6 +42,12 @@ message, at most 10 in total, each with a default.
 Do not ask what you can read in the materials. Do not ask about method. Free-text answers are
 fine; "не знаю" means the default.
 
+Before you send the questions, record them so a new chat can pick up the answers:
+
+```
+bin/strat step intake.questions --next "Waiting for answers to intake questions: 1) <short> 2) <short> ... Defaults: <short>"
+```
+
 ## 4. Write the brief
 
 - Copy `knowledge/templates/brief.md` to `cases/<id>/brief.md` and fill every section in

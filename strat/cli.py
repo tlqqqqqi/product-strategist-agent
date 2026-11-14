@@ -112,6 +112,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--quote", default=None)
     p.add_argument("--as-of", dest="as_of", default=None)
     p.add_argument("--supports", default=None, help="comma-separated claim ids")
+    p.add_argument("--historical", action="store_true",
+                   help="a claim about a closed past period; never goes stale")
     p.add_argument("--step", default=None)
     p.set_defaults(target="claim add")
     p = _cmd(csub, "check", "quote check, then the support judgment")

@@ -18,7 +18,7 @@ SAMPLES = {
     "source add": ["source", "add", "f.xlsx", "--step", "s"],
     "claim add": ["claim", "add", "--type", "fact", "--kind", "price", "--text", "t",
                   "--source", "S001", "--where", "w", "--quote", "q", "--as-of", "2026-10",
-                  "--supports", "C001"],
+                  "--supports", "C001", "--historical"],
     "claim check": ["claim", "check", "--all"],
     "claim list": ["claim", "list", "--load-bearing"],
     "claim replace": ["claim", "replace", "C001", "C002"],

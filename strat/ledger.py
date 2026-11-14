@@ -90,7 +90,7 @@ def period_end(as_of: str) -> date:
 
 def is_stale(claim: dict, life: dict, on: date | None = None) -> bool:
     days = life.get(claim.get("kind"))
-    if days is None or not claim.get("as_of"):
+    if claim.get("historical") or days is None or not claim.get("as_of"):
         return False
     return (on or today()) - period_end(claim["as_of"]) > timedelta(days=int(days))
 
@@ -172,7 +172,8 @@ def render_md(cdir: Path, claims: list[dict]) -> None:
             star = " *" if c["id"] in bearing else ""
             lines.append(f"| {c['id']}{star} | {_cell(c['text'])} | {_cell(src)} | "
                          f"{_cell(c.get('where'))} | {_cell(c.get('quote'))} | "
-                         f"{_cell(c.get('as_of'))} | {STATUS_RU[status_of(c, life)]} |")
+                         f"{_cell(c.get('as_of'))} | {STATUS_RU[status_of(c, life)]}"
+                         f"{', история' if c.get('historical') else ''} |")
         lines.append("")
     (cdir / "claims.md").write_text("\n".join(lines), encoding="utf-8")
 
@@ -194,7 +195,8 @@ def _check_supports(claims: list[dict], ids: list[str], type_: str) -> None:
 
 def add(type_: str, kind: str, text: str, case: str | None = None, source: str | None = None,
         where: str | None = None, quote: str | None = None, as_of: str | None = None,
-        supports: str | None = None, step: str | None = None, as_json: bool = False) -> int:
+        supports: str | None = None, step: str | None = None, historical: bool = False,
+        as_json: bool = False) -> int:
     """Add one claim after the type and source rules."""
     from strat.state import log_action, replay
 
@@ -226,6 +228,12 @@ def add(type_: str, kind: str, text: str, case: str | None = None, source: str |
         if missing:
             raise StratError("a fact needs --" + ", --".join(missing) + "; without a source it "
                              "is an assumption or a gap")
+    if historical:
+        if not as_of:
+            raise StratError("a historical claim needs --as-of: the period it describes")
+        if as_of[:4] not in text:
+            raise StratError(f"a historical claim must name its period in the text (it does not "
+                             f"mention {as_of[:4]}); write e.g. \"в августе {as_of[:4]} ...\"")
     if type_ == "conclusion" and not support_ids:
         raise StratError("a conclusion needs --supports: the claims it rests on")
     check = {"quote": None, "supported": None, "by": None}
@@ -242,7 +250,8 @@ def add(type_: str, kind: str, text: str, case: str | None = None, source: str |
     cid = f"C{len(claims) + 1:03d}"
     claim = {"id": cid, "text": text.strip(), "type": type_, "kind": kind, "source": source,
              "where": where, "quote": quote, "as_of": as_of, "status": "active",
-             "supports": support_ids, "replaced_by": None, "check": check, "added": now()}
+             "supports": support_ids, "replaced_by": None, "check": check, "added": now(),
+             "historical": bool(historical)}
     claims.append(claim)
     save(cdir, claims)
     if step:

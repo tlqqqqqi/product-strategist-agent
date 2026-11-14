@@ -29,8 +29,26 @@ be the source of a fact; a conclusion must name its supports.
 `--kind` sets how long a claim stays usable (`config/shelf-life.yaml`): `product_metric` 60 days,
 `price` 90, `competitor_feature` 180, `market` 365, `regulation` 365, `method` never stale.
 `--as-of` is the end of the period the claim describes (`2026-10` for an October figure), not the
-day you read it. A stale claim cannot support new conclusions until `strat claim confirm` with a
-newer source.
+day you read it. Never move `as_of` to get past a check.
+
+Shelf life is about claims that describe the current state ("churn is 6.8%", "the competitor
+charges 299 ₽"). A claim about a closed past period that you use as history ("in August 2026
+churn rose to 5.9%", "the May 2026 promo cohort lost 21.4% by month 3") is added with
+`--historical`: it never goes stale, and its text must name its period (the CLI checks that the
+year is there). Use it for causes, timelines and before/after comparisons, not to keep an old
+figure alive as if it were current.
+
+## When a claim you need is stale
+
+A stale claim cannot support new conclusions. Tell the user in one message which claim, its
+period and why you need it, and offer three ways out:
+
+1. newer data: the user gives a newer material; register it and run `bin/strat claim confirm`;
+2. use it as history: if the decision only needs what happened in that period, re-add it with
+   `--historical` and wording that names the period, then `bin/strat claim replace` the old one;
+3. record a gap: `--type gap`, and say what the decision loses without it.
+
+Then wait for the answer; this is a question to the user, not a gate.
 
 ## Quotes and `where`
 

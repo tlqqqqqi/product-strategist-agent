@@ -31,7 +31,12 @@ is used anywhere. Read `knowledge/claims.md` if you have not in this session.
    - a figure that needs a calculation (a difference, a share, a growth rate): write a short
      script `analysis/q<N>_<name>.py`, run it with `.venv/bin/python`, save its output to
      `analysis/q<N>_<name>.txt`, register the output with `bin/strat source add`, and quote it;
-   - your inference from several claims: `--type conclusion --supports C..,C..`.
+   - your inference from several claims: `--type conclusion --supports C..,C..`;
+   - a figure about a closed past period used as history (a cause, a timeline, a
+     before/after): `--historical`, with the period named in the text;
+   - a claim you need turns out stale (the CLI or the gate check says so): follow
+     "When a claim you need is stale" in `knowledge/claims.md`; ask the user, never move
+     `as_of`.
 3. Compare sources. When two sources disagree, record both, then a `conclusion` or a `gap` that
    says which you trust and why.
 4. Update `table.md`: the cell's estimate and claims, and the "Влияние исследования" row with

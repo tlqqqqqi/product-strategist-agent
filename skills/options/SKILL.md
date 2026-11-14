@@ -17,6 +17,9 @@ description: Use after research or at stage gate2. Rewrites the options on the r
 - State the best honest case for "keep as is" and for "close". If you cannot, say what is
   missing (a gap).
 
+A stale claim cannot be cited (the gate check refuses it). If one you need is stale, ask the
+user as described in `knowledge/claims.md` ("When a claim you need is stale").
+
 ## 2. Objections
 
 Follow `knowledge/objections.md`. For each option write the strongest objection, then your

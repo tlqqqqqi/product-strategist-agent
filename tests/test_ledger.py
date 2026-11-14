@@ -167,3 +167,27 @@ def test_snapshot_path_outside_sources_is_refused(strat, src, case):
     idx.write_text(idx.read_text().replace('"sources/S001.md"', '"../../outside.txt"'))
     r = fact(strat)
     assert r.code == 1 and "snapshot" in r.err
+
+
+def test_historical_claim_never_goes_stale(strat, case, monkeypatch):
+    strat("source", "add", "materials/metrics.xlsx")
+    r = strat("claim", "add", "--type", "fact", "--kind", "product_metric", "--historical",
+              "--text", "У промо-когорты мая 2026 отток на третий месяц 21.4%",
+              "--source", "S001", "--where", "cohorts!C2", "--quote", "21.4",
+              "--as-of", "2026-08", "--json")
+    assert r.code == 0, r.err
+    assert r.data["claim"]["historical"] is True
+    monkeypatch.setenv("STRAT_TODAY", "2030-01-01")
+    assert strat("claim", "list", "--stale", "--json").data == []
+    assert "история" in (case / "claims.md").read_text()
+
+
+def test_historical_claim_must_name_its_period(strat, case):
+    strat("source", "add", "materials/metrics.xlsx")
+    r = strat("claim", "add", "--type", "fact", "--kind", "product_metric", "--historical",
+              "--text", "У промо-когорты отток на третий месяц 21.4%",
+              "--source", "S001", "--where", "cohorts!C2", "--quote", "21.4",
+              "--as-of", "2026-08")
+    assert r.code == 1 and "2026" in r.err
+    r = strat("claim", "add", "--type", "gap", "--kind", "market", "--historical", "--text", "x")
+    assert r.code == 1 and "--as-of" in r.err
