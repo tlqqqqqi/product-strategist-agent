@@ -82,7 +82,8 @@ def ide_usage(rows: list[dict], created: str | None) -> dict:
             except ValueError:
                 continue
             msg = d.get("message") or {}
-            if d.get("type") != "assistant" or not msg.get("usage") or not d.get("timestamp"):
+            if (d.get("type") != "assistant" or not msg.get("usage") or not d.get("timestamp")
+                    or msg.get("model") == "<synthetic>"):  # local placeholders, no API call
                 continue
             if d.get("cwd") and Path(d["cwd"]).resolve() != root():
                 continue
