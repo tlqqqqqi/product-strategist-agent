@@ -11,7 +11,6 @@ import time
 from strat import net
 from strat.core import (
     UNAVAILABLE,
-    USER_DECIDES,
     StratError,
     case_path,
     emit,
@@ -22,6 +21,9 @@ from strat.core import (
 )
 
 KINDS = ("keyword", "text", "semantic")
+STOP_AND_ASK = ("Do not retry: stop and ask the user how to proceed - add one key "
+                "(BRAVE_API_KEY, TAVILY_API_KEY or EXA_API_KEY) to .env, or let you use the IDE's "
+                "own web search tool and save each page with `strat read <url> --step ID`.")
 
 
 def chain(kind: str) -> list[str]:
@@ -74,12 +76,9 @@ def search(query: str, step: str, case: str | None = None, kind: str = "keyword"
                    sec=time.monotonic() - started)
         _print(results, as_json, replayed=False)
         return 0
-    if failures:
-        raise StratError("all search providers failed: " + "; ".join(failures + tried)
-                         + ". Stop and ask the user how to proceed.", USER_DECIDES)
-    raise StratError("no search key configured (" + "; ".join(tried) + "). Set BRAVE_API_KEY in "
-                     ".env, or use your own web search tool if you have one and save each page "
-                     "with `strat read <url> --step ID`.", UNAVAILABLE)
+    head = ("all search providers failed: " + "; ".join(failures + tried) if failures
+            else "no search key configured (" + "; ".join(tried) + ")")
+    raise StratError(head + ". " + STOP_AND_ASK, UNAVAILABLE)
 
 
 def _print(results: list[dict], as_json: bool, replayed: bool) -> None:
