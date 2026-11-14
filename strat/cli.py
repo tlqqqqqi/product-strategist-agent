@@ -178,12 +178,20 @@ def build_parser() -> argparse.ArgumentParser:
                    help="record the IDE agent's own answer (stored with by=agent)")
     p.set_defaults(target="judge")
 
-    p = _cmd(sub, "consult", "challenger call, writes objections.jsonl")
-    p.add_argument("call", choices=["variants", "challenge"])
+    p = _cmd(sub, "consult", "challenger call (variants|challenge), verdicts, list")
+    p.add_argument("call", choices=["variants", "challenge", "verdict", "list"])
+    p.add_argument("objection_id", nargs="?", default=None, help="verdict: the O id")
+    p.add_argument("verdict", nargs="?", default=None, help="verdict: accepted|rejected|open")
+    p.add_argument("--reason", default=None, help="verdict: the written reason")
+    p.add_argument("--from-file", dest="from_file", default=None,
+                   help="import the challenger's JSON answer (native subagent, same vendor)")
+    p.add_argument("--step", default=None, help="log step id (default consult.<call>)")
     p.set_defaults(target="consult")
 
-    p = _cmd(sub, "debate", "one debate round on an objection")
+    p = _cmd(sub, "debate", "one debate round on a rejected critical objection")
     p.add_argument("objection_id")
+    p.add_argument("--from-file", dest="from_file", default=None,
+                   help="import the challenger's JSON reply (native subagent, same vendor)")
     p.set_defaults(target="debate")
 
     p = _cmd(sub, "ingest", "register new material after a decision; case moves to revision")

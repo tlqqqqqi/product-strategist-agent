@@ -1,6 +1,7 @@
 intake:
   quick_max_questions: 5
   deep_max_questions: 10
+# strat debate: only a rejected critical objection; refused past these caps.
 debate:
   max_rounds: 2
   max_debates_per_case: 2

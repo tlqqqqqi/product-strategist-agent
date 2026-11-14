@@ -32,6 +32,7 @@ models:
     jev/jev-1.14.0: 0.50
     jev/laya-multilingual: 1.00
     ds/deepseek-v4-flash: 0.0125
+    cx/gpt-6.1-sol: 0.10    # x2 coefficient, GET /v1/models 2026-11-14
   # A model not listed above is logged with this rate and marked "estimate" in the log note.
   default_usd_per_mtok: 2.00
 
@@ -81,3 +82,15 @@ media:
   timeout_sec: 300
   # Local fallback: faster-whisper or openai-whisper, this model size.
   whisper_model: small
+
+# strat consult variants|challenge and strat debate: the challenger. Files only (brief, table,
+# options; plus claims.md for challenge), never the conversation. STRAT_PEER_MODEL in .env wins;
+# this is the default. A strong model from another vendor than the IDE agent (Anthropic), from
+# AnyModel's GET /v1/models on 2026-11-14: cx/gpt-6.1-sol (GPT class, coefficient x2, i.e.
+# 0.10 USD per 1M tokens at the 5-cent base). Rejected: cx/gpt-6-astra (x4, slower: the
+# challenger needs a strong view from another vendor, not the top model) and the judge's cheap
+# model (the spec rejects a small cheap model as the challenger).
+consult:
+  model: cx/gpt-6.1-sol
+  reasoning_effort: medium  # GPT reasoning models default to high; medium keeps time and cost down
+  max_tokens: 6000          # room for reasoning plus up to 10 objections
