@@ -23,7 +23,22 @@ def test_xlsx_snapshot_has_one_block_per_sheet():
 def test_xlsx_counts_empty_cells_per_column():
     text = convert(str(METRICS))
     cohorts = text.split("## sheet: cohorts")[1].split("## sheet:")[0]
-    assert "empty cells: A 0, B 0, C 1, D 0" in cohorts
+    assert "empty cells: A 0, B 0, C 0, D 1, E 0" in cohorts
+
+
+def test_cohort_sheet_is_unambiguous():
+    """Cohort columns are counts of May sign-ups, defined on the `about` sheet."""
+    text = convert(str(METRICS))
+    cohorts = text.split("## sheet: cohorts")[1].split("## sheet:")[0]
+    assert "channel,new_users_2026_05,paid_users_2026_08,paid_users_2026_10,promo" in cohorts
+    rows = [r.split(",") for r in cohorts.splitlines() if r.startswith(("promo_", "organic",
+                                                                         "partner_", "paid_ads"))]
+    signups = sum(int(r[1]) for r in rows)
+    non_promo = sum(int(r[1]) for r in rows if r[4] == "no")
+    assert signups != 41200 and non_promo < 5000  # a month of sign-ups, not the whole base
+    about = text.split("## sheet: about")[1]
+    for col in ("paying_users", "churn_pct", "new_users_2026_05", "paid_users_2026_08"):
+        assert col in about
 
 
 def test_csv_is_one_block_named_after_the_file():

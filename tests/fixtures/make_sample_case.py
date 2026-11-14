@@ -30,16 +30,33 @@ def metrics_xlsx(path: Path) -> None:
     ]:
         ws.append(row)
     cohorts = wb.create_sheet("cohorts")
-    cohorts.append(["channel", "joined_2026_05", "churn_month3_pct", "promo"])
+    cohorts.append(["channel", "new_users_2026_05", "paid_users_2026_08", "paid_users_2026_10",
+                    "promo"])
     for row in [
-        ["promo_3_months_free", 9800, 21.4, "yes"],
-        ["organic", 18200, 3.2, "no"],
-        ["partner_bank", 6100, 4.0, "no"],
-        ["paid_ads", 7100, None, "no"],
+        ["promo_3_months_free", 9800, 2050, 1280, "yes"],
+        ["organic", 1900, 1680, 1490, "no"],
+        ["partner_bank", 700, 620, 560, "no"],
+        ["paid_ads", 900, 770, None, "no"],
     ]:
         cohorts.append(row)
     note = wb.create_sheet("about")
     note.append(["ВЫМЫШЛЕННЫЕ ДАННЫЕ для тестов и примера. Продукт и цифры придуманы."])
+    note.append(["column", "meaning"])
+    for row in [
+        ["monthly.paying_users", "Пользователи, с которых в этом месяце прошло списание. "
+         "Пользователи акции входят сюда с первого списания (август 2026)."],
+        ["monthly.churn_pct", "Доля платящих прошлого месяца, с которых в этом месяце списания "
+         "не было. Пользователи акции, ни разу не заплатившие, сюда не входят."],
+        ["monthly.arpu_rub", "Выручка месяца, делённая на paying_users, ₽."],
+        ["cohorts.new_users_2026_05", "Новые пользователи, зарегистрированные в мае 2026, "
+         "по каналу привлечения."],
+        ["cohorts.paid_users_2026_08", "Из них: с кого прошло списание в августе 2026. Для акции "
+         "это первое списание, уже по цене 349 ₽."],
+        ["cohorts.paid_users_2026_10", "Из них: с кого прошло списание в октябре 2026. Пусто - "
+         "данные канала ещё не выгружены."],
+        ["cohorts.promo", "yes - канал с акцией «3 месяца бесплатно» (май-июль без оплаты)."],
+    ]:
+        note.append(row)
     wb.save(path)
 
 
