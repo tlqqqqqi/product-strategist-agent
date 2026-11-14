@@ -27,17 +27,31 @@ def test_xlsx_counts_empty_cells_per_column():
 
 
 def test_cohort_sheet_is_unambiguous():
-    """Cohort columns are counts of May sign-ups, defined on the `about` sheet."""
+    """Cohort columns count May sign-ups and how many of them paid later; `about` defines them.
+    Payers never exceed sign-ups, October never exceeds August, and the cohort is a small part
+    of the monthly paying base (it is one month of sign-ups, not the base)."""
     text = convert(str(METRICS))
+    monthly = text.split("## sheet: monthly")[1].split("## sheet:")[0]
+    paying = {r.split(",")[0]: int(r.split(",")[1]) for r in monthly.splitlines()
+              if r.startswith("2026-")}
     cohorts = text.split("## sheet: cohorts")[1].split("## sheet:")[0]
     assert "channel,new_users_2026_05,paid_users_2026_08,paid_users_2026_10,promo" in cohorts
-    rows = [r.split(",") for r in cohorts.splitlines() if r.startswith(("promo_", "organic",
-                                                                         "partner_", "paid_ads"))]
-    signups = sum(int(r[1]) for r in rows)
-    non_promo = sum(int(r[1]) for r in rows if r[4] == "no")
-    assert signups != 41200 and non_promo < 5000  # a month of sign-ups, not the whole base
+    rows = {r.split(",")[0]: r.split(",")[1:] for r in cohorts.splitlines()
+            if r.startswith(("promo_", "organic", "partner_", "paid_ads"))}
+    assert rows == {
+        "promo_3_months_free": ["9800", "2050", "1280", "yes"],
+        "organic": ["1900", "1680", "1490", "no"],
+        "partner_bank": ["700", "620", "560", "no"],
+        "paid_ads": ["900", "770", "", "no"],
+    }
+    for new, aug, octo, _ in rows.values():
+        assert 0 <= int(aug) <= int(new)
+        assert octo == "" or 0 <= int(octo) <= int(aug)
+    assert sum(int(r[1]) for r in rows.values()) < paying["2026-08"] / 5
+    assert sum(int(r[2]) for r in rows.values() if r[2]) < paying["2026-10"] / 5
     about = text.split("## sheet: about")[1]
-    for col in ("paying_users", "churn_pct", "new_users_2026_05", "paid_users_2026_08"):
+    for col in ("paying_users", "churn_pct", "new_users_2026_05", "paid_users_2026_08",
+                "paid_users_2026_10"):
         assert col in about
 
 

@@ -175,6 +175,19 @@ def test_uncited_decision_table_row_fails_gate1(strat, ready):
     assert stage(ready) == "intake"
 
 
+def test_uncited_criteria_bullet_in_table_fails(strat, ready):
+    edit(ready, "table.md", "- Отток [C001]", "- Отток")
+    r = strat("gate", "check", "1")
+    assert r.code == 1 and f"table.md:{line_of(ready, 'table.md', '- Отток')}: no citation" in r.err
+
+
+def test_cited_table_passes_gate2_after_gate1(strat, ready):
+    assert strat("gate", "check", "1").code == 0
+    assert strat("gate", "approve", "1").code == 0
+    r = strat("gate", "check", "2")
+    assert r.code == 0, r.err
+
+
 def test_step_out_checks_table_citations(strat, ready):
     edit(ready, "table.md", "| Q1 | откат x отток | - [C003] | нет |", "| Q1 | откат x отток | - | нет |")
     r = strat("step", "plan.table", "--out", "table.md")
