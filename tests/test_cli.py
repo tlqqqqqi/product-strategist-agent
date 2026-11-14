@@ -38,6 +38,7 @@ SAMPLES = {
     "cost": ["cost"],
     "report": ["report"],
     "replay export": ["replay", "export"],
+    "analysis check": ["analysis", "check", "S001"],
 }
 
 

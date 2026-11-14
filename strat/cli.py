@@ -42,6 +42,7 @@ COMMANDS: dict[str, str] = {
     "cost": "cost:cost",
     "report": "report:report",
     "replay export": "replay:export",
+    "analysis check": "analysis:check",
 }
 
 
@@ -208,10 +209,19 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--transcript", default=None)
     p.set_defaults(target="replay export")
 
+    analysis = sub.add_parser("analysis", help="data analysis scripts in analysis/")
+    asub = analysis.add_subparsers(dest="analysis_cmd", required=True)
+    p = _cmd(asub, "check", "rerun the script behind an analysis output; report figures that "
+                            "do not reproduce, gaps, unit and period mismatches")
+    p.add_argument("source_id", nargs="?", default=None)
+    p.add_argument("--all", dest="all_", action="store_true")
+    p.set_defaults(target="analysis check")
+
     return parser
 
 
-_INTERNAL = {"command", "target", "gate_cmd", "source_cmd", "claim_cmd", "replay_cmd"}
+_INTERNAL = {"command", "target", "gate_cmd", "source_cmd", "claim_cmd", "replay_cmd",
+             "analysis_cmd"}
 
 
 def resolve(target: str):

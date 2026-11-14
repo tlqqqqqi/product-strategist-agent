@@ -30,9 +30,10 @@ is used anywhere. Read `knowledge/claims.md` if you have not in this session.
    - one assertion per claim; a fact gets `--source --where --quote --as-of`;
    - copy the quote exactly from the snapshot; if the command reports "quote not found",
      reopen the snapshot and copy again, do not paraphrase;
-   - a figure that needs a calculation (a difference, a share, a growth rate): write a short
-     script `analysis/q<N>_<name>.py`, run it with `.venv/bin/python`, save its output to
-     `analysis/q<N>_<name>.txt`, register the output with `bin/strat source add`, and quote it;
+   - a figure that needs a calculation (a difference, a share, a growth rate): follow
+     `skills/data-analysis/SKILL.md` - a short script `analysis/q<N>_<name>.py` run with
+     `.venv/bin/python`, its output `analysis/q<N>_<name>.txt` registered with
+     `bin/strat source add`, checked with `bin/strat analysis check <S id>`, then quoted;
    - after each `fact`: `bin/strat judge support --claim <id>` (a second model checks that
      the quote supports the claim text; well under 0.001 USD). Exit 0 records the verdict; on
      a "no", fix the claim text or the quote. Exit 3 means no model was sure or none is
