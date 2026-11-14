@@ -13,8 +13,9 @@ is used anywhere. Read `knowledge/claims.md` if you have not in this session.
 1. **The user's materials** (`sources/` snapshots of `materials/`). They are the cheapest and
    usually the most specific. Follow `skills/materials/SKILL.md`.
 2. **Web pages.** Find pages with `bin/strat search "<query>" --step research.q<N>.search.<k>`
-   when a search key is set. If it exits 2 (no key), use your own web search tool if you have
-   one. If you have neither, ask the user for links. Query tips:
+   when a search key is set; add `--kind keyword|text|semantic` (which one: see the query
+   tips below). If it exits 2 (no key, or every provider failed), do not retry: use your own
+   web search tool if you have one. If you have neither, ask the user for links. Query tips:
    `skills/research/references/search-queries.md`.
    Then save every page you use: `bin/strat read <url> --step research.q<N>.read.<k>`. Quote
    from the saved snapshot, never from a search snippet or a tool summary.
@@ -31,13 +32,19 @@ is used anywhere. Read `knowledge/claims.md` if you have not in this session.
    - a figure that needs a calculation (a difference, a share, a growth rate): write a short
      script `analysis/q<N>_<name>.py`, run it with `.venv/bin/python`, save its output to
      `analysis/q<N>_<name>.txt`, register the output with `bin/strat source add`, and quote it;
+   - after each `fact`: `bin/strat judge support --claim <id>` (a second model checks that
+     the quote supports the claim text; well under 0.001 USD). Exit 0 records the verdict; on
+     a "no", fix the claim text or the quote. Exit 3 means no model was sure or none is
+     available: read the printed prompt, decide yourself and record it with `--answer`.
+     Report a model's verdict to the user as an assessment, not a fact;
    - your inference from several claims: `--type conclusion --supports C..,C..`;
    - a figure about a closed past period used as history (a cause, a timeline, a
      before/after): `--historical`, with the period named in the text;
    - a claim you need turns out stale (the CLI or the gate check says so): follow
      "When a claim you need is stale" in `knowledge/claims.md`; ask the user, never move
      `as_of`.
-3. Compare sources. When two sources disagree, record both, then a `conclusion` or a `gap` that
+3. Compare sources. When two sources disagree (`bin/strat judge contradiction --claim A
+   --other B` when unsure), record both, then a `conclusion` or a `gap` that
    says which you trust and why.
 4. Update `table.md`: the cell's estimate and claims, and the "Влияние исследования" row with
    "Изменил ранжирование: да/нет". Mark the question done in `plan.md` (`- [x]`). Every

@@ -39,7 +39,8 @@ ask which answers could change their ranking.
 - Write the stop rule: stop when no open question can change the ranking, or when the budget is
   spent; what is left becomes a gap.
 - Everything you decide not to research is listed under "Пробелы" as `gap` claims.
-- Cost estimate: the number of CLI calls that cost money (`strat search` about 0.005 USD each;
+- Cost estimate: the number of CLI calls that cost money (`strat search` 0.005-0.008 USD each, see `config/routes.yaml`; `strat judge` under
+  0.001 USD each;
   `read` and `source add` are free) plus the IDE model's own tokens, which the CLI cannot see;
   say so.
 - Log: `bin/strat step plan.plan --out plan.md`

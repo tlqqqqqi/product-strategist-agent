@@ -76,7 +76,9 @@ bin/strat new <id> --title "..."     start a case
 bin/strat step <id> [--stage S] [--out FILE] [--next TEXT]
 bin/strat source add <path>          register a material, prints S id
 bin/strat read <url|file.html> --step ID
-bin/strat search "<q>" --step ID     needs a search key; else use your own web search tool
+bin/strat search "<q>" [--kind keyword|text|semantic] --step ID   needs a search key; else your own web search
+bin/strat judge support|contradiction|type|sufficient --claim C [--other C] [--answer A]
+bin/strat report                     memo.md -> memo.html
 bin/strat claim add --type T --kind K --text "..." --source S --where W --quote "..." --as-of YYYY-MM
 bin/strat claim list [--load-bearing] [--stale]
 bin/strat gate check <n>  /  bin/strat gate approve <n>
