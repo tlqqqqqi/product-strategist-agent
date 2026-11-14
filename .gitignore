@@ -1,0 +1,30 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# python and tool caches
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+build/
+dist/
+
+# browser profile used by the optional capture
+.browser-profile/
+.playwright/
+
+# local planning files: never pushed
+docs/specs/
+handoffs/
+
+# user cases stay on the user's machine; only the empty template is committed
+cases/*
+!cases/_template/
+!cases/_template/**
+
+.DS_Store

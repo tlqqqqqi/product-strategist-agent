@@ -1,0 +1,8 @@
+# Days a claim stays usable, by kind. A claim is stale when today minus as_of (end of the
+# period) exceeds its shelf life. null means it never goes stale.
+product_metric: 60
+price: 90
+competitor_feature: 180
+market: 365
+regulation: 365
+method: null

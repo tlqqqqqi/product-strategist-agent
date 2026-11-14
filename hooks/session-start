@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+"""Session-start hook, one script for every environment.
+
+Prints the bootstrap skill plus the output of `strat state`, wrapped in the format the
+environment expects. Standard library only, no install needed, never fails the session.
+"""
+
+import io
+import json
+import os
+import sys
+from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
+
+ROOT = Path(os.environ.get("CLAUDE_PROJECT_DIR") or Path(__file__).resolve().parents[1])
+
+
+def state_text() -> str:
+    sys.path.insert(0, str(ROOT))
+    os.environ.setdefault("STRAT_ROOT", str(ROOT))
+    buf = io.StringIO()
+    try:
+        from strat.cli import main
+
+        with redirect_stdout(buf), redirect_stderr(buf):
+            main(["state"])
+    except Exception as exc:  # the hook must never break the session
+        buf.write(f"(strat state failed: {exc}; run `bin/strat state`)")
+    return buf.getvalue().strip()
+
+
+def context() -> str:
+    skill = ROOT / "skills" / "using-strategist" / "SKILL.md"
+    bootstrap = skill.read_text(encoding="utf-8") if skill.is_file() else "(bootstrap skill missing)"
+    return (
+        "<strategist-bootstrap>\n"
+        "You are in the strategist folder. Follow skills/using-strategist (below).\n\n"
+        f"{bootstrap}\n"
+        "</strategist-bootstrap>\n\n"
+        "<strategist-state>\n"
+        f"$ bin/strat state\n{state_text()}\n"
+        "</strategist-state>"
+    )
+
+
+def main() -> None:
+    text = context()
+    if os.environ.get("CURSOR_PLUGIN_ROOT") or os.environ.get("CURSOR_PROJECT_DIR"):
+        print(json.dumps({"additional_context": text}, ensure_ascii=False))
+    elif os.environ.get("CLAUDE_PROJECT_DIR"):
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart",
+                                                 "additionalContext": text}}, ensure_ascii=False))
+    else:
+        print(text)
+
+
+if __name__ == "__main__":
+    main()

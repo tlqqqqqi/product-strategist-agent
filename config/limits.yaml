@@ -1,0 +1,10 @@
+intake:
+  quick_max_questions: 5
+  deep_max_questions: 10
+debate:
+  max_rounds: 2
+  max_debates_per_case: 2
+flow:
+  max_capture_steps: 10
+budget:
+  default_limit_usd: 5.0

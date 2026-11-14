@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Launcher: creates .venv on first run, then runs the CLI.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+VENV="$ROOT/.venv"
+
+if [ ! -x "$VENV/bin/python" ]; then
+  echo "strat: first run, installing into $VENV ..." >&2
+  if command -v uv >/dev/null 2>&1; then
+    uv venv -q --python ">=3.11" "$VENV" >&2
+    uv pip install -q --python "$VENV/bin/python" -e "$ROOT[dev]" >&2
+  else
+    PY="$(command -v python3 || true)"
+    if [ -z "$PY" ] || ! "$PY" -c 'import sys; sys.exit(sys.version_info < (3, 11))'; then
+      echo "strat: Python 3.11+ is required (python3 not found or too old)" >&2
+      exit 2
+    fi
+    "$PY" -m venv "$VENV" >&2
+    "$VENV/bin/python" -m pip install -q -e "$ROOT[dev]" >&2
+  fi
+fi
+
+export STRAT_ROOT="${STRAT_ROOT:-$ROOT}"
+exec "$VENV/bin/python" -m strat.cli "$@"

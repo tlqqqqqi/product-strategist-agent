@@ -1,0 +1,6 @@
+# Fixed routing per step. Phase 1 uses only search; models and judge come in Phase 2.
+search:
+  # one provider per call by kind, falling through on failure; brave is the last fallback
+  keyword: [brave]
+  text: [brave]
+  semantic: [brave]
