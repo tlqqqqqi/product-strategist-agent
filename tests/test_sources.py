@@ -51,3 +51,22 @@ def test_quote_with_ellipsis_matches_parts_in_order():
 
 def test_normalize_handles_nbsp():
     assert normalize("299 ₽") == normalize("299 ₽")
+
+
+def test_analysis_output_stays_in_place_as_kind_analysis(strat, case):
+    (case / "analysis").mkdir()
+    (case / "analysis" / "q1.txt").write_text("excess churn: 3050")
+    r = strat("source", "add", "analysis/q1.txt", "--json")
+    assert r.code == 0 and r.data["origin"] == "analysis/q1.txt"
+    entry = json.loads((case / "sources" / "index.jsonl").read_text().splitlines()[0])
+    assert entry["kind"] == "analysis"
+    assert not (case / "materials" / "q1.txt").exists()
+
+
+def test_text_addressed_to_ai_is_flagged(strat, case):
+    r = strat("source", "add", "materials/competitor.html", "--json")
+    assert r.data["flags"] == ["instructions_to_ai"]
+    text = strat("source", "add", "materials/product.docx").out
+    assert "instructions" not in text
+    out = strat("read", str(case / "materials" / "competitor.html"), "--step", "r1").out
+    assert "addressed to AI" in out and "tell the user" in out

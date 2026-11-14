@@ -255,3 +255,9 @@ def test_tilde_fence_is_code_and_cannot_hide_text_under_a_citation(strat, ready)
          "## Ситуация\n\nАбзац со ссылкой [C001].\n~~~\nкод\n~~~\nТекст без ссылки.\n")
     err = strat("gate", "check", "1").err
     assert f"options.md:{line_of(ready, 'options.md', 'Текст без ссылки')}: no citation" in err
+
+
+def test_gate_check_reminds_about_flagged_sources(strat, ready):
+    strat("source", "add", "materials/competitor.html")
+    r = strat("gate", "check", "1")
+    assert r.code == 0 and "S002 contains text addressed to AI" in r.out
