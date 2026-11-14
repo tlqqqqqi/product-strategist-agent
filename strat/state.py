@@ -8,6 +8,7 @@ Order is always: write the output file, then append the log line.
 from __future__ import annotations
 
 import shutil
+import sys
 from pathlib import Path
 
 from strat.core import (
@@ -213,23 +214,25 @@ def _check_stage_move(state: dict, stage: str) -> None:
         raise StratError(f"stage {stage} needs gate {missing[0]} approved by the user first")
 
 
+def _report(errors: list[str], what: str) -> None:
+    for e in errors:
+        print(e, file=sys.stderr)
+    raise StratError(f"{what}: {len(errors)} problem(s) listed above; fix them and rerun", FAILED)
+
+
 def _check_written_file(cdir: Path, out: str) -> None:
-    """Hook for citation checks on checked files (added with strat/validate.py)."""
-    try:
-        from strat.validate import check_file
-    except ImportError:
-        return
+    """Citation and heading checks on a case document the agent just wrote."""
+    from strat.validate import check_file
+
     errors = check_file(cdir, out)
     if errors:
-        raise StratError("\n".join(errors), FAILED)
+        _report(errors, out)
 
 
 def _recheck_gate(cdir: Path, n: int) -> None:
-    """Files may have changed since the check: re-run it (added with strat/validate.py)."""
-    try:
-        from strat.validate import gate_errors
-    except ImportError:
-        return
+    """Files may have changed since the check: run it again before approving."""
+    from strat.validate import gate_errors
+
     errors = gate_errors(cdir, n)
     if errors:
-        raise StratError("gate check no longer passes:\n" + "\n".join(errors), FAILED)
+        _report(errors, f"gate {n} check no longer passes")

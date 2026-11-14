@@ -62,7 +62,8 @@ def test_gate_approve_needs_the_gate_stage(strat, case):
     assert state_of(case)["gates"]["1"] == "pending"
 
 
-def test_gate_approve_advances_and_logs(strat, case):
+def test_gate_approve_advances_and_logs(strat, case, monkeypatch):
+    monkeypatch.setattr("strat.validate.gate_errors", lambda cdir, n: [])  # files: test_validate
     s = state_of(case)
     s["stage"] = "gate1"
     (case / "state.json").write_text(json.dumps(s))
@@ -78,13 +79,13 @@ def test_gate_approve_advances_and_logs(strat, case):
 
 def test_restart_resumes_at_last_finished_step(strat, case):
     """A crash between writing the output and logging means the step runs again."""
-    strat("step", "plan.options", "--stage", "plan", "--next", "write plan.md")
-    (case / "plan.md").write_text("half-written")  # crash: file written, no log line
+    strat("step", "plan.options", "--stage", "plan", "--next", "write notes.md")
+    (case / "notes.md").write_text("half-written")  # crash: file written, no log line
     r = strat("state", "--json")
     assert r.data["last_step"]["step"] == "plan.options"
-    assert r.data["next"] == "write plan.md"
-    (case / "plan.md").write_text("done")
-    redo = strat("step", "plan.plan", "--out", "plan.md", "--json")
+    assert r.data["next"] == "write notes.md"
+    (case / "notes.md").write_text("done")
+    redo = strat("step", "plan.notes", "--out", "notes.md", "--json")
     assert redo.data["replayed"] is False
 
 
