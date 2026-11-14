@@ -1,6 +1,11 @@
 # Fixed routing per step. Phase 1 uses only search; models and judge come in Phase 2.
 search:
-  # one provider per call by kind, falling through on failure; brave is the last fallback
+  # One provider per call by kind, falling through on failure; brave is the last fallback.
+  # Phase 1 ships brave only; tavily and exa join after the Russian query test.
   keyword: [brave]
   text: [brave]
   semantic: [brave]
+  # Price per call in USD, used for the cost log. Estimate from the vendor's pricing page
+  # (about 5 USD per 1000 requests); check it there before quoting it.
+  usd_per_call:
+    brave: 0.005

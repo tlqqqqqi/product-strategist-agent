@@ -99,6 +99,26 @@ def write_jsonl(path: Path, rows: Iterable[dict]) -> None:
     tmp.replace(path)
 
 
+def env(key: str) -> str:
+    """A setting from the environment, else from .env (STRAT_ENV_FILE overrides its path).
+
+    .env is parsed as KEY=VALUE lines; it is never printed or logged.
+    """
+    if os.environ.get(key):
+        return os.environ[key]
+    path = Path(os.environ.get("STRAT_ENV_FILE") or root() / ".env")
+    if not path.is_file():
+        return ""
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, value = line.split("=", 1)
+        if name.strip().removeprefix("export ").strip() == key:
+            return value.strip().strip("'\"")
+    return ""
+
+
 def load_config(name: str) -> dict:
     """Read config/<name>.yaml. PyYAML is imported lazily so `strat state` stays stdlib-only."""
     import yaml
