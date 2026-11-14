@@ -234,8 +234,9 @@ def add(type_: str, kind: str, text: str, case: str | None = None, source: str |
             raise StratError(f"unknown source {source}: register it with `strat source add` or "
                              "`strat read` first")
         if quote:
-            if not sources.check_quote(cdir, source, quote):
-                raise StratError(f"quote not found in {source}: copy it exactly from "
+            ok, label = sources.check_located_quote(cdir, source, where, quote)
+            if not ok:
+                raise StratError(f"quote not found in {label}: copy it exactly from "
                                  f"{sources.get(cdir, source)['snapshot']}")
             check["quote"] = True
     cid = f"C{len(claims) + 1:03d}"
@@ -264,7 +265,11 @@ def check(claim_id: str | None = None, case: str | None = None, all_: bool = Fal
     results, failed = [], 0
     for c in targets:
         if c.get("source") and c.get("quote"):
-            ok = sources.check_quote(cdir, c["source"], c["quote"])
+            try:
+                ok = sources.check_located_quote(cdir, c["source"], c.get("where"),
+                                                 c["quote"])[0]
+            except StratError:
+                ok = False
             c["check"]["quote"] = ok
             failed += not ok
         results.append({"id": c["id"], "quote": c["check"]["quote"],
@@ -346,8 +351,9 @@ def confirm(claim_id: str, source: str, where: str, quote: str, as_of: str,
         raise StratError(f"--as-of {as_of} is not newer than {c['as_of']}")
     if sources.get(cdir, source) is None:
         raise StratError(f"unknown source {source}")
-    if not sources.check_quote(cdir, source, quote):
-        raise StratError(f"quote not found in {source}")
+    ok, label = sources.check_located_quote(cdir, source, where, quote)
+    if not ok:
+        raise StratError(f"quote not found in {label}")
     c.setdefault("history", []).append({k: c.get(k) for k in ("source", "where", "quote",
                                                               "as_of")} | {"until": now()})
     c.update(source=source, where=where, quote=quote, as_of=as_of, status="active")

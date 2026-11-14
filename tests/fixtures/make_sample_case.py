@@ -7,9 +7,12 @@ from pathlib import Path
 
 import openpyxl
 from docx import Document
+from pptx import Presentation
+from pptx.util import Inches
 
 HERE = Path(__file__).resolve().parent
 MATERIALS = HERE / "sample-case" / "materials"
+KINDS = HERE / "kinds"
 
 
 def metrics_xlsx(path: Path) -> None:
@@ -70,7 +73,62 @@ def product_docx(path: Path) -> None:
     doc.save(path)
 
 
+def table_csv(path: Path) -> None:
+    path.write_text(
+        "channel,trials,paid,conversion_pct\n"
+        "organic,1200,312,26.0\n"
+        "promo,3400,408,12.0\n"
+        "partner_bank,800,,\n",
+        encoding="utf-8",
+    )
+
+
+def deck_pptx(path: Path) -> None:
+    prs = Presentation()
+    s1 = prs.slides.add_slide(prs.slide_layouts[1])
+    s1.shapes.title.text = "Итоги квартала"
+    s1.placeholders[1].text = "Выручка выросла на 12% (данные команды продукта)"
+    s1.notes_slide.notes_text_frame.text = "Цифра без учёта возвратов"
+    s2 = prs.slides.add_slide(prs.slide_layouts[5])
+    s2.shapes.title.text = "Каналы"
+    rows = [("Канал", "Доля"), ("Промо", "41%"), ("Органика", "37%")]
+    shape = s2.shapes.add_table(3, 2, Inches(1), Inches(2), Inches(6), Inches(1.5))
+    for r, row in enumerate(rows):
+        for c, value in enumerate(row):
+            shape.table.cell(r, c).text = value
+    prs.save(path)
+
+
+def report_pdf(path: Path) -> None:
+    """A two-page PDF written by hand: page 1 has a text layer, page 2 has none."""
+    text = b"BT /F1 12 Tf 72 720 Td (Churn in October was 6.8 percent.) Tj ET"
+    objs = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R "
+        b"/Resources << /Font << /F1 6 0 R >> >> >>",
+        b"<< /Length %d >>\nstream\n%s\nendstream" % (len(text), text),
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+    out = bytearray(b"%PDF-1.4\n")
+    offsets = []
+    for i, body in enumerate(objs, 1):
+        offsets.append(len(out))
+        out += b"%d 0 obj\n%s\nendobj\n" % (i, body)
+    xref = len(out)
+    out += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objs) + 1)
+    for off in offsets:
+        out += b"%010d 00000 n \n" % off
+    out += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objs) + 1, xref)
+    path.write_bytes(bytes(out))
+
+
 if __name__ == "__main__":
+    KINDS.mkdir(parents=True, exist_ok=True)
+    table_csv(KINDS / "trials.csv")
+    deck_pptx(KINDS / "deck.pptx")
+    report_pdf(KINDS / "report.pdf")
     MATERIALS.mkdir(parents=True, exist_ok=True)
     metrics_xlsx(MATERIALS / "metrics.xlsx")
     product_docx(MATERIALS / "product.docx")

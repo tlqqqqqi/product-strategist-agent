@@ -7,7 +7,9 @@ parts that must occur in order.
 
 from __future__ import annotations
 
+import csv
 import hashlib
+import io
 import re
 import shutil
 from pathlib import Path
@@ -72,6 +74,120 @@ def check_quote(cdir: Path, source_id: str, quote: str) -> bool:
     if entry is None:
         raise StratError(f"unknown source {source_id}")
     return quote_found(snapshot_text(cdir, entry), quote)
+
+
+# --- where: locate the region a claim points to -------------------------------------------------
+
+CELL_RANGE = re.compile(r"^(?P<sheet>[^!]+)!(?P<c1>[A-Z]{1,3})(?P<r1>\d+)"
+                        r"(?::(?P<c2>[A-Z]{1,3})(?P<r2>\d+))?$")
+WHERE_FORMS = {
+    "xlsx": "<sheet>!A1 or <sheet>!A1:C9",
+    "xlsm": "<sheet>!A1 or <sheet>!A1:C9",
+    "csv": "<sheet>!A1 or <sheet>!A1:C9 (the sheet is the file name without extension)",
+    "docx": "a heading text, 'Heading > Subheading', or 'paragraph N'",
+    "pptx": "slide N",
+    "pdf": "page N",
+}
+
+
+def _col_index(letters: str) -> int:
+    n = 0
+    for ch in letters:
+        n = n * 26 + ord(ch) - 64
+    return n
+
+
+def _blocks(text: str, header: re.Pattern) -> dict[str, str]:
+    """Split a snapshot at header lines; key = the header's first group."""
+    out, key, buf = {}, None, []
+    for line in text.splitlines():
+        m = header.match(line)
+        if m:
+            if key is not None:
+                out[key] = "\n".join(buf)
+            key, buf = m.group(1).strip(), []
+        elif key is not None:
+            buf.append(line)
+    if key is not None:
+        out[key] = "\n".join(buf)
+    return out
+
+
+def _bad_where(fmt: str, where: str, why: str) -> StratError:
+    return StratError(f"bad --where {where!r} for a {fmt} source: {why}; expected "
+                      f"{WHERE_FORMS[fmt]}")
+
+
+def locate(text: str, fmt: str, where: str | None) -> tuple[str, bool]:
+    """Return (region text, located). Free-form sources (html, text) return the whole text."""
+    if fmt not in WHERE_FORMS:
+        return text, False
+    where = (where or "").strip()
+    if fmt in ("xlsx", "xlsm", "csv"):
+        m = CELL_RANGE.match(where)
+        if not m:
+            raise _bad_where(fmt, where, "not a cell range")
+        sheets = _blocks(text, re.compile(r"^## sheet: (.+)$"))
+        if m["sheet"] not in sheets:
+            raise _bad_where(fmt, where, f"no sheet {m['sheet']!r} (sheets: {', '.join(sheets)})")
+        body = sheets[m["sheet"]]
+        fenced = body.split("```csv\n", 1)[1].rsplit("```", 1)[0] if "```csv" in body else ""
+        grid = list(csv.reader(io.StringIO(fenced)))
+        c1, r1 = _col_index(m["c1"]), int(m["r1"])
+        c2, r2 = (_col_index(m["c2"]), int(m["r2"])) if m["c2"] else (c1, r1)
+        width = max((len(r) for r in grid), default=0)
+        if not (1 <= r1 <= r2 <= len(grid) and 1 <= c1 <= c2 <= width):
+            raise _bad_where(fmt, where, f"outside the sheet ({width} columns, {len(grid)} rows)")
+        cells = [grid[r - 1][c - 1] for r in range(r1, r2 + 1) for c in range(c1, c2 + 1)
+                 if c - 1 < len(grid[r - 1])]
+        return "\n".join(cells), True
+    if fmt in ("pptx", "pdf"):
+        unit = "slide" if fmt == "pptx" else "page"
+        m = re.match(rf"^{unit} (\d+)$", where)
+        if not m:
+            raise _bad_where(fmt, where, "wrong form")
+        blocks = _blocks(text, re.compile(rf"^## {unit} (\d+)$"))
+        if m.group(1) not in blocks:
+            raise _bad_where(fmt, where, f"no {unit} {m.group(1)} ({len(blocks)} in the file)")
+        return blocks[m.group(1)], True
+    # docx
+    m = re.match(r"^(?:paragraph |p)(\d+)$", where)
+    if m:
+        for line in text.splitlines():
+            if line.startswith(f"[p{m.group(1)}] "):
+                return line, True
+        raise _bad_where(fmt, where, f"no paragraph {m.group(1)}")
+    path = [normalize(part) for part in where.split(">") if part.strip()]
+    if not path:
+        raise _bad_where(fmt, where, "empty")
+    region, level, matched = [], None, 0
+    for line in text.splitlines():
+        hm = re.match(r"^(#{2,}) (.+)$", line)
+        if hm:
+            depth = len(hm.group(1))
+            if level is not None and depth <= level:
+                break
+            if level is None and normalize(hm.group(2)) == path[matched]:
+                matched += 1
+                if matched == len(path):
+                    level = depth
+                continue
+        if level is not None:
+            region.append(line)
+    if level is None:
+        raise _bad_where(fmt, where, "no such heading")
+    return "\n".join(region), True
+
+
+def check_located_quote(cdir: Path, source_id: str, where: str | None,
+                        quote: str) -> tuple[bool, str]:
+    """Quote check inside the region `where` points to. Returns (ok, label for messages)."""
+    entry = get(cdir, source_id)
+    if entry is None:
+        raise StratError(f"unknown source {source_id}")
+    region, located = locate(snapshot_text(cdir, entry), entry.get("format", "text"), where)
+    label = f"{where} ({source_id})" if located else source_id
+    return quote_found(region, quote), label
 
 
 def sha256(data: bytes) -> str:
