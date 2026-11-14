@@ -57,3 +57,27 @@ judge:
   # less predictable for availability.
   chat_model: ds/deepseek-v4-flash
   chat_max_tokens: 800  # room for a reasoning model to think before the one answer line
+
+# strat media: speech to text for audio and video (strat/media.py). Endpoint and key from .env:
+# STRAT_STT_BASE_URL, STRAT_STT_API_KEY, STRAT_STT_MODEL. Without a key: local Whisper.
+media:
+  # Default model when the base URL is Mistral's and STRAT_STT_MODEL is empty. Voxtral Mini
+  # Transcribe 3 (GET api.mistral.ai/v1/models, 2026-11-14: voxtral-mini-latest still points to
+  # the 26.02 model, deprecated 2026-10-31, so the 3.0 id is pinned).
+  mistral_model: voxtral-mini-transcribe-3-0
+  # USD per minute of audio, docs.mistral.ai/inference/pricing, checked 2026-11-14.
+  usd_per_min:
+    voxtral-mini-transcribe-3-0: 0.0035
+    voxtral-mini-transcribe-3: 0.0035
+    voxtral-small-transcribe-3-0: 0.004
+    voxtral-small-transcribe-3: 0.004
+    voxtral-mini-2602: 0.003
+    voxtral-mini-latest: 0.003
+  # A model not listed above is logged at this rate and marked "price estimated".
+  default_usd_per_min: 0.006
+  # Long files are cut into chunks of this length; each chunk is one logged step, so a restart
+  # continues after the last finished chunk.
+  chunk_sec: 600
+  timeout_sec: 300
+  # Local fallback: faster-whisper or openai-whisper, this model size.
+  whisper_model: small

@@ -163,10 +163,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--step", default=None, help="log step id (default capture.<flow>)")
     p.set_defaults(target="capture")
 
-    p = _cmd(sub, "media", "audio or video into sources")
+    p = _cmd(sub, "media", "audio or video into a timestamped transcript (and frames) as sources")
     p.add_argument("path")
-    p.add_argument("--every", type=int, default=10)
-    p.add_argument("--step", default=None)
+    p.add_argument("--every", type=int, default=10, help="video: seconds between frames")
+    p.add_argument("--step", default=None, help="log step id (default media.<name>)")
     p.set_defaults(target="media")
 
     p = _cmd(sub, "judge", "small judgment through the routing table")

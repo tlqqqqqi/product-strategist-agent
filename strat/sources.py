@@ -89,6 +89,8 @@ WHERE_FORMS = {
     "pptx": "slide N",
     "pdf": "page N",
     "shot": "an element name from the screenshot's box JSON (its `targets`)",
+    "transcript": "a moment HH:MM:SS inside a segment (or its start), or a range "
+                  "HH:MM:SS-HH:MM:SS",
 }
 
 
@@ -131,6 +133,19 @@ def locate(text: str, fmt: str, where: str | None) -> tuple[str, bool]:
             names = ", ".join(list(targets)[:30])
             raise _bad_where(fmt, where, f"no element {where!r} (elements: {names})")
         return targets[where].get("text", ""), True
+    if fmt == "transcript":
+        from strat.media import locate_transcript, segments_of
+
+        try:
+            region = locate_transcript(text, where)
+        except ValueError as exc:
+            raise _bad_where(fmt, where, str(exc)) from None
+        if region is None:
+            segs = segments_of(text)
+            span = f"{segs[0][0]}-{segs[-1][1]} s" if segs else "no segments"
+            raise _bad_where(fmt, where, f"no segment at that time (the transcript covers "
+                                         f"{span})")
+        return region, True
     if fmt in ("xlsx", "xlsm", "csv"):
         m = CELL_RANGE.match(where)
         if not m:
