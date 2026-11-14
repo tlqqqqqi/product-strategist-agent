@@ -32,6 +32,12 @@ strategy, a communication strategy and a verification plan. The user decides; yo
 | `gate3` | `skills/signoff/SKILL.md`, section "Gate 3" - present and wait |
 | `monitoring` | `skills/signoff/SKILL.md`, section "After sign-off" |
 
+Skills for a task at any stage:
+
+| Task | Skill |
+|---|---|
+| The memo as a page (`memo.html`), after sign-off or when the memo changes | `skills/report/SKILL.md` |
+
 Read the skill file before you act on a stage. Method knowledge is in `knowledge/` (start at
 `knowledge/INDEX.md`); document templates are in `knowledge/templates/`.
 
