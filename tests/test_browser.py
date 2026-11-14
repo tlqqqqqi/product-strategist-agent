@@ -186,6 +186,16 @@ def test_risky_click_is_refused_and_logged(strat, case, site, tmp_path, target, 
     assert all(method == "GET" for method, _ in seen)
 
 
+def test_a_failed_step_is_logged_and_keeps_earlier_shots(strat, case, site, tmp_path):
+    base, _ = site
+    plan = _plan(tmp_path, [{"name": "start"}, {"name": "next", "click": "#no-such-link"}])
+    r = strat("capture", f"{base}/index.html", "--flow", "broken", "--plan", plan)
+    assert r.code == 1 and "step 2 (next) failed" in r.err and "Traceback" not in r.err
+    assert "01_start.png" in r.err
+    row = read_jsonl(case / "log.jsonl")[-1]
+    assert row["status"] == "error" and row["ref"] == "S001"
+
+
 def test_without_a_plan_steps_are_screens_of_one_page(strat, case, site):
     base, _ = site
     r = strat("capture", f"{base}/index.html", "--flow", "scroll", "--steps", "2", "--json")

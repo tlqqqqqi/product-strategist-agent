@@ -260,6 +260,25 @@ class _Walk:
         return shot
 
 
+def _act(page, walk: _Walk, item: dict) -> bool:
+    """Do a step's action. False when a screen step finds no more page to scroll."""
+    if "scroll" in item:
+        if item["scroll"]:
+            before = page.evaluate("() => scrollY")
+            page.evaluate("() => scrollBy(0, Math.round(innerHeight * 0.9))")
+            page.wait_for_timeout(300)
+            if page.evaluate("() => scrollY") == before:
+                return False
+    elif "goto" in item:
+        page.goto(item["goto"], timeout=30000)
+        walk.settle()
+    elif "click" in item:
+        walk.click(item["click"])
+    if item.get("wait"):
+        page.wait_for_timeout(item["wait"])
+    return True
+
+
 def capture(url: str, flow: str, case: str | None = None, steps: int = 5,
             plan: str | None = None, step: str | None = None, as_json: bool = False) -> int:
     """Walk a public flow into shots/<flow>/ and register each shot as a source."""
@@ -323,25 +342,23 @@ def capture(url: str, flow: str, case: str | None = None, steps: int = 5,
                                  UNAVAILABLE) from None
             walk.settle()
             for n, item in enumerate(todo, 1):
-                if "scroll" in item:
-                    if item["scroll"]:
-                        before = page.evaluate("() => scrollY")
-                        page.evaluate("() => scrollBy(0, Math.round(innerHeight * 0.9))")
-                        page.wait_for_timeout(300)
-                        if page.evaluate("() => scrollY") == before:
-                            break  # the page has no more screens
-                elif "goto" in item:
-                    page.goto(item["goto"], timeout=30000)
-                    walk.settle()
-                elif "click" in item:
-                    try:
-                        walk.click(item["click"])
-                    except Refused as exc:
-                        refused_at = (n, item, str(exc))
-                        break
-                if item.get("wait"):
-                    page.wait_for_timeout(item["wait"])
-                walk.capture(n, item["name"], item.get("targets", {}))
+                try:
+                    if not _act(page, walk, item):
+                        break  # the page has no more screens
+                    walk.capture(n, item["name"], item.get("targets", {}))
+                except Refused as exc:
+                    refused_at = (n, item, str(exc))
+                    break
+                except (PwError, StratError) as exc:
+                    why = str(exc).splitlines()[0]
+                    log_action(cdir, step=step, tool="capture", in_=url, out=f"shots/{flow}/",
+                               status="error", ref=",".join(s["id"] for s in walk.shots),
+                               note=f"step {n} {item['name']}: {why}",
+                               sec=time.monotonic() - started)
+                    kept = ", ".join(s["shot"] for s in walk.shots) or "none"
+                    raise StratError(f"step {n} ({item['name']}) failed: {why}. Shots kept: "
+                                     f"{kept}. Fix the plan and capture under a new --flow "
+                                     "name", FAILED) from None
         finally:
             browser.close()
 
