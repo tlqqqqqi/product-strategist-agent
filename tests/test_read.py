@@ -89,3 +89,11 @@ def test_page_text_is_data_not_instructions(strat, case):
     snap = (case / "sources" / "S001.md").read_text()
     assert "игнорируйте предыдущие инструкции" in snap
     assert json.loads((case / "state.json").read_text())["stage"] == "intake"
+
+
+def test_read_does_not_overwrite_a_different_material(strat, case, tmp_path):
+    other = tmp_path / "competitor.html"
+    other.write_text("<p>другая страница</p>")
+    r = strat("read", str(other), "--step", "r9")
+    assert r.code == 1 and "already exists" in r.err
+    assert "ОблакоПлюс" in (case / "materials" / "competitor.html").read_text()

@@ -160,18 +160,20 @@ def locate(text: str, fmt: str, where: str | None) -> tuple[str, bool]:
     path = [normalize(part) for part in where.split(">") if part.strip()]
     if not path:
         raise _bad_where(fmt, where, "empty")
-    region, level, matched = [], None, 0
+    region, level, matched, parent_depth = [], None, 0, None
     for line in text.splitlines():
         hm = re.match(r"^(#{2,}) (.+)$", line)
-        if hm:
+        if hm and level is None:
             depth = len(hm.group(1))
-            if level is not None and depth <= level:
-                break
-            if level is None and normalize(hm.group(2)) == path[matched]:
-                matched += 1
+            if parent_depth is not None and depth <= parent_depth:
+                matched, parent_depth = 0, None  # left the parent: start the path again
+            if normalize(hm.group(2)) == path[matched]:
+                matched, parent_depth = matched + 1, depth
                 if matched == len(path):
                     level = depth
-                continue
+            continue
+        if hm and len(hm.group(1)) <= level:
+            break
         if level is not None:
             region.append(line)
     if level is None:
@@ -210,6 +212,21 @@ def register(cdir: Path, *, kind: str, origin: str, title: str, text: str, diges
     return entry
 
 
+def into_materials(cdir: Path, src: Path) -> Path:
+    """A file outside the case is copied into materials/; the original is never changed and a
+    different file with the same name is never overwritten."""
+    src = src.resolve()
+    materials = (cdir / "materials").resolve()
+    if materials in src.parents:
+        return src
+    dest = materials / src.name
+    if dest.exists() and sha256(dest.read_bytes()) != sha256(src.read_bytes()):
+        raise StratError(f"materials/{src.name} already exists with other content; rename the "
+                         "file")
+    shutil.copy2(src, dest)
+    return dest
+
+
 # --- command ----------------------------------------------------------------------------------
 
 def add(path: str, case: str | None = None, title: str | None = None, step: str | None = None,
@@ -225,15 +242,7 @@ def add(path: str, case: str | None = None, title: str | None = None, step: str 
         src = cdir / path if (cdir / path).exists() else Path.cwd() / path
     if not src.is_file():
         raise StratError(f"{path}: file not found")
-    src = src.resolve()
-    materials = (cdir / "materials").resolve()
-    if materials not in src.parents:
-        dest = materials / src.name
-        if dest.exists() and sha256(dest.read_bytes()) != sha256(src.read_bytes()):
-            raise StratError(f"materials/{src.name} already exists with other content; rename "
-                             "the file")
-        shutil.copy2(src, dest)
-        src = dest
+    src = into_materials(cdir, src)
     text = conv.convert(str(src))
     origin = str(src.relative_to(cdir.resolve()))
     entry = register(cdir, kind="file", origin=origin, title=title or src.name, text=text,

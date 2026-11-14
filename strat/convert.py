@@ -46,7 +46,15 @@ def convert(path: str) -> str:
         raise StratError(f"{p.name}: format .{fmt} is not supported; supported: xlsx, csv, docx, "
                          "pptx, pdf, html, md, txt. Images are read by the agent directly.",
                          UNAVAILABLE)
-    return handler(p)
+    try:
+        return handler(p)
+    except StratError:
+        raise
+    except ImportError as exc:
+        raise StratError(f"{p.name}: missing library ({exc.name}); run bin/strat doctor",
+                         UNAVAILABLE) from None
+    except Exception as exc:  # a malformed file: report it, never a traceback
+        raise StratError(f"could not read {p.name}: {type(exc).__name__}: {exc}") from None
 
 
 # --- tables -----------------------------------------------------------------------------------

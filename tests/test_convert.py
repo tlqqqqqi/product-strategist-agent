@@ -95,3 +95,21 @@ def test_quote_outside_the_named_range_is_refused(strat, case):
               "--source", sid, "--where", "monthly!B2:B7", "--quote", "6.8",
               "--as-of", "2026-10")
     assert r.code == 1 and "quote not found in monthly!B2:B7" in r.err
+
+
+def test_docx_heading_path_must_be_nested():
+    from strat.core import StratError
+    from strat.sources import locate
+
+    text = "## A\n[p1] one\n## Unrelated\n[p2] two\n## B\n[p3] three\n"
+    with pytest.raises(StratError):
+        locate(text, "docx", "A > B")
+    nested = "## A\n[p1] one\n### B\n[p2] two\n## C\n[p3] three\n"
+    assert locate(nested, "docx", "A > B")[0].strip() == "[p2] two"
+
+
+@pytest.mark.parametrize("name", ["broken.xlsx", "broken.docx", "broken.pptx", "broken.pdf"])
+def test_malformed_file_is_a_clean_error(strat, case, name):
+    (case / "materials" / name).write_bytes(b"not really a " + name.encode())
+    r = strat("source", "add", f"materials/{name}")
+    assert r.code == 1 and "could not read" in r.err

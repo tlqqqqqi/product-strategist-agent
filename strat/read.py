@@ -7,14 +7,13 @@ treated as an instruction. The browser fallback for pages that need JavaScript i
 from __future__ import annotations
 
 import re
-import shutil
 import time
 from pathlib import Path
 
 from strat import net
 from strat.convert import html_to_text
 from strat.core import UNAVAILABLE, StratError, case_path, emit
-from strat.sources import register, sha256
+from strat.sources import into_materials, register, sha256
 
 TEXT_TYPES = ("text/html", "application/xhtml+xml", "text/plain")
 _CHARSET = re.compile(rb"""<meta[^>]+charset=["']?([\w-]+)""", re.I)
@@ -57,11 +56,7 @@ def read(url: str, step: str, case: str | None = None, title: str | None = None,
     local = _local_html(cdir, url)
     started = time.monotonic()
     if local is not None:
-        materials = (cdir / "materials").resolve()
-        if materials not in local.parents:
-            dest = materials / local.name
-            shutil.copy2(local, dest)
-            local = dest
+        local = into_materials(cdir, local)
         body = local.read_bytes()
         origin = str(local.relative_to(cdir.resolve()))
         page_title, text = html_to_text(_decode(body, ""))
