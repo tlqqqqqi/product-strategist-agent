@@ -28,8 +28,8 @@ description: Use at stage gate3 or monitoring. Presents the strategies for sign-
    (the step fails on an uncited line: fix and rerun).
 3. **Report to the user** in Russian: where the memo and the full files are
    (`cases/<id>/memo.md`, `claims.md`), the check date, and the cost from `bin/strat cost`
-   (CLI calls only; the IDE model's own usage is not included). The HTML version of the memo is
-   not available in this version.
+   (CLI calls only; the IDE model's own usage is not included). Before this report, run
+   `bin/strat report` to render `memo.html` and follow `skills/report/SKILL.md`.
 
 ## Later sessions at stage monitoring
 
