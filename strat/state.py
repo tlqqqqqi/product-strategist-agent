@@ -7,11 +7,11 @@ Order is always: write the output file, then append the log line.
 
 from __future__ import annotations
 
-import re
 import shutil
 from pathlib import Path
 
 from strat.core import (
+    CASE_ID,
     FAILED,
     StratError,
     append_jsonl,
@@ -38,7 +38,6 @@ NEXT_AFTER_GATE = {
     2: "Strategy: product, communication, promise check, verification (skills/strategy)",
     3: "Write the decision record and the memo (skills/signoff, After sign-off)",
 }
-CASE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,47}$")
 
 
 # --- state file -------------------------------------------------------------------------------
@@ -80,13 +79,18 @@ def log_action(cdir: Path, *, step: str, tool: str, stage: str | None = None, in
     return row
 
 
-def replay(cdir: Path, step: str | None, as_json: bool) -> bool:
-    """If `step` is already done, print its recorded result and return True."""
+def replay(cdir: Path, step: str | None, as_json: bool, tool: str) -> bool:
+    """If `step` is already done, print its recorded result and return True.
+
+    A step id belongs to one command: reusing it for another command is an error, not a replay.
+    """
     if not step:
         return False
     row = find_ok(cdir, step)
     if row is None:
         return False
+    if row["tool"] != tool:
+        raise StratError(f"step id {step} is already used by `{row['tool']}`; pick a new id")
     ref = row.get("ref", "")
     emit(f"step {step} already done ({row['ts']}): {ref} {row['out']}\n{row['note']}".strip(),
          {"replayed": True, "step": step, "out": row["out"], "note": row["note"],
@@ -153,7 +157,7 @@ def step(step_id: str, case: str | None = None, stage: str | None = None, out: s
          next_: str | None = None, note: str | None = None, as_json: bool = False) -> int:
     """Log one agent action (idempotent by id), set stage and next."""
     cdir = case_path(case)
-    if replay(cdir, step_id, as_json):
+    if replay(cdir, step_id, as_json, "agent"):
         return 0
     state = load(cdir)
     if stage is not None:
@@ -179,7 +183,7 @@ def step(step_id: str, case: str | None = None, stage: str | None = None, out: s
 def gate_approve(n: int, case: str | None = None, as_json: bool = False) -> int:
     """Record the user's approval of gate n and advance the stage."""
     cdir = case_path(case)
-    if replay(cdir, f"gate{n}.approve", as_json):
+    if replay(cdir, f"gate{n}.approve", as_json, "gate"):
         return 0
     state = load(cdir)
     if state["stage"] != f"gate{n}":

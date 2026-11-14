@@ -154,3 +154,16 @@ def test_check_all_reports_a_quote_that_no_longer_matches(strat, src, case):
     assert r.data["results"][0] == {"id": "C001", "quote": False, "supported": None,
                                     "by": None}
     assert json.loads((case / "claims.jsonl").read_text())["check"]["quote"] is False
+
+
+def test_impossible_date_is_a_validation_error(strat, case):
+    r = strat("claim", "add", "--type", "gap", "--kind", "market", "--text", "x",
+              "--as-of", "2026-02-31")
+    assert r.code == 1 and "bad --as-of" in r.err
+
+
+def test_snapshot_path_outside_sources_is_refused(strat, src, case):
+    idx = case / "sources" / "index.jsonl"
+    idx.write_text(idx.read_text().replace('"sources/S001.md"', '"../../outside.txt"'))
+    r = fact(strat)
+    assert r.code == 1 and "snapshot" in r.err

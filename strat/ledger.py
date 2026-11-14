@@ -82,9 +82,10 @@ def period_end(as_of: str) -> date:
     mo = int(month)
     if not 1 <= mo <= 12:
         raise StratError(f"bad --as-of {as_of!r}: month out of range")
-    if day:
-        return date(y, mo, int(day))
-    return date(y, mo, calendar.monthrange(y, mo)[1])
+    try:
+        return date(y, mo, int(day)) if day else date(y, mo, calendar.monthrange(y, mo)[1])
+    except ValueError:
+        raise StratError(f"bad --as-of {as_of!r}: no such date") from None
 
 
 def is_stale(claim: dict, life: dict, on: date | None = None) -> bool:
@@ -198,7 +199,7 @@ def add(type_: str, kind: str, text: str, case: str | None = None, source: str |
     from strat.state import log_action, replay
 
     cdir = case_path(case)
-    if replay(cdir, step, as_json):
+    if replay(cdir, step, as_json, "claim add"):
         return 0
     life = shelf_life()
     if type_ not in TYPES:

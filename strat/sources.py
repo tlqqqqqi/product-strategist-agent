@@ -61,7 +61,10 @@ def get(cdir: Path, source_id: str) -> dict | None:
 
 
 def snapshot_text(cdir: Path, entry: dict) -> str:
-    return (cdir / entry["snapshot"]).read_text(encoding="utf-8")
+    path = (cdir / entry["snapshot"]).resolve()
+    if path.parent != (cdir / "sources").resolve() or not path.is_file():
+        raise StratError(f"{entry['id']}: snapshot {entry['snapshot']!r} is not a file in sources/")
+    return path.read_text(encoding="utf-8")
 
 
 def check_quote(cdir: Path, source_id: str, quote: str) -> bool:
@@ -99,7 +102,7 @@ def add(path: str, case: str | None = None, title: str | None = None, step: str 
     from strat.state import log_action, replay
 
     cdir = case_path(case)
-    if replay(cdir, step, as_json):
+    if replay(cdir, step, as_json, "source add"):
         return 0
     src = Path(path)
     if not src.is_absolute():

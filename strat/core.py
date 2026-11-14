@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Iterable
 
 OK, FAILED, UNAVAILABLE, USER_DECIDES = 0, 1, 2, 3
+CASE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,47}$")
 
 
 class StratError(Exception):
@@ -44,6 +46,8 @@ def resolve_case(case: str | None) -> str:
     case = case or current_case()
     if not case:
         raise StratError("no active case: run `strat new <id> --title T` or pass --case", USER_DECIDES)
+    if not CASE_ID.match(case):
+        raise StratError(f"bad case id {case!r}", USER_DECIDES)
     if not (cases_dir() / case / "state.json").is_file():
         raise StratError(f"case not found: {case}", USER_DECIDES)
     return case

@@ -94,3 +94,18 @@ def test_logged_usd_is_added_to_the_budget(case):
     log_action(case, step="research.q1.search.1", tool="search", stage="research",
                in_="q", out="sources/S001.md", usd=0.25)
     assert state_of(case)["budget"]["spent_usd"] == 0.25
+
+
+def test_case_option_cannot_escape_the_cases_dir(strat, case, tmp_path):
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "state.json").write_text("{}")
+    r = strat("state", "--case", "../outside")
+    assert r.code == 3 and "bad case id" in r.err
+
+
+def test_step_id_reused_by_another_command_is_refused(strat, case):
+    assert strat("source", "add", "materials/competitor.html", "--step", "research.q1.1").code == 0
+    r = strat("claim", "add", "--type", "gap", "--kind", "market", "--text", "x",
+              "--step", "research.q1.1")
+    assert r.code == 1 and "already used by `source add`" in r.err
