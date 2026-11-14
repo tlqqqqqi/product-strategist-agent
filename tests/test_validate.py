@@ -242,3 +242,16 @@ def test_step_out_on_a_checked_file_validates_it(strat, ready):
     r = strat("step", "plan.options", "--out", "options.md")
     assert r.code == 1 and "options.md:" in r.err and "no citation" in r.err
     assert strat("step", "plan.brief", "--out", "brief.md").code == 0
+
+
+def test_heading_inside_code_does_not_count(strat, ready):
+    edit(ready, "options.md", "## Возражения\n", "```\n## Возражения\n")
+    edit(ready, "options.md", "## Рекомендация\n", "```\n\n## Рекомендация\n")
+    assert "missing heading '## Возражения'" in strat("gate", "check", "1").err
+
+
+def test_tilde_fence_is_code_and_cannot_hide_text_under_a_citation(strat, ready):
+    edit(ready, "options.md", "## Ситуация\n",
+         "## Ситуация\n\nАбзац со ссылкой [C001].\n~~~\nкод\n~~~\nТекст без ссылки.\n")
+    err = strat("gate", "check", "1").err
+    assert f"options.md:{line_of(ready, 'options.md', 'Текст без ссылки')}: no citation" in err

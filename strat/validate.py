@@ -30,6 +30,7 @@ GATE_FILES = {
 BULLET = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+")
 TABLE_ROW = re.compile(r"^\s*\|")
 SEPARATOR = re.compile(r"^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$")
+FENCE = ("```", "~~~")
 PLACEHOLDER = re.compile(r"<[^<>\n]{2,80}>|\[C\.\.\.\]")
 
 
@@ -49,7 +50,7 @@ def units(lines: list[str]) -> list[tuple[int, str]]:
 
     for i, line in enumerate(lines, 1):
         stripped = line.strip()
-        if stripped.startswith("```"):
+        if stripped.startswith(FENCE):
             close()
             in_code = not in_code
             continue
@@ -115,7 +116,13 @@ def heading_errors(cdir: Path, name: str) -> list[str]:
     template = TEMPLATE_OF.get(name)
     if template is None:
         return []
-    lines = (cdir / name).read_text(encoding="utf-8").splitlines()
+    lines, in_code = [], False
+    for line in (cdir / name).read_text(encoding="utf-8").splitlines():
+        if line.strip().startswith(FENCE):
+            in_code = not in_code
+            lines.append("")
+            continue
+        lines.append("" if in_code and line.startswith("#") else line)
     errors = []
     for heading in required_headings(template):
         try:
