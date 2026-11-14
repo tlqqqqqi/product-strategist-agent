@@ -13,7 +13,7 @@
 ## Which `--kind`
 
 `bin/strat search "<q>" --kind keyword|text|semantic --step ID` sends the query to one provider,
-chosen by kind in `config/routes.yaml`; if it fails, the next one answers (Brave is always last).
+chosen by kind in `config/routes.yaml`; if it fails, the next one answers.
 
 - `keyword` (default): a name, a tariff, a price, an exact term - "<конкурент> тариф семейный цена 2026".
 - `text`: you need the numbers or the passage in the snippet - market size, a benchmark, a law.

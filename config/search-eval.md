@@ -1,7 +1,7 @@
 # Russian query test for search providers
 
 Run 2026-11-14 with `scripts/search_eval.py` (live, keys from `.env`). It decides the order of
-Tavily and Exa per kind in `config/routes.yaml`; Brave stays the last fallback by design.
+providers per kind in `config/routes.yaml`.
 
 ## Method
 
@@ -53,29 +53,10 @@ and a Russian page that repeats the query words as a hit, which is why it ranked
 
 ## Decision
 
-- keyword: `[exa, tavily, brave]` - Exa 0.84 over Tavily 0.75.
-- text: `[exa, tavily, brave]` - Exa 0.89 over Tavily 0.87: within noise; Exa is fresher (0.71
-  vs 0.60) and cheaper (0.007 vs 0.008 USD).
+The first draft kept Brave last by an earlier design rule; the results contradicted that rule
+and the owner dropped it (2026-11-14).
+
+- keyword: `[brave, exa, tavily]` - Brave 0.82 and Exa 0.84 are close; Brave is cheaper
+  (0.005 vs 0.007 USD) and faster (1.6 vs 2.1 s). Tavily 0.75 last.
+- text: `[brave, exa, tavily]` - Brave 0.92 over Exa 0.89 and Tavily 0.87.
 - semantic: `[exa, tavily, brave]` - the result-by-result check overrides the heuristic.
-
-## What the test also showed
-
-- Brave scored highest on every kind (mean 0.86 overall), is the fastest (1.6 s) and the
-  cheapest (0.005 USD), but has the shortest snippets (181 chars). The design keeps Brave last
-  for every kind; on Russian queries that choice costs relevance and freshness. Whether to put
-  Brave first for `keyword` is a spec decision and is proposed in the task report, not made here.
-- Tavily's `language: ru` boost still lets machine-translated foreign pages (Reddit) through.
-
-## Cost of the run
-
-66 live calls: 60 for the test, 3 smoke calls before it, 2 calls that read the billed price
-(Exa `costDollars.total` 0.007 per call with highlights; Tavily `usage.credits` 1), 1 end-to-end
-`strat search` call. At list prices: Brave 21 x 0.005 + Tavily 22 x 0.008 + Exa 23 x 0.007 =
-about 0.44 USD. Free monthly
-credits may have covered part of it; the vendor dashboards show the billed amount.
-
-## Limits
-
-One run, 20 queries, 5 results each; heuristics plus one agent's reading, no human panel.
-Results change with the web and the vendors' indexes; rerun the script before relying on the
-order for a new market.

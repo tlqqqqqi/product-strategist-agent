@@ -1,12 +1,11 @@
 # Fixed routing per step: search providers, outside models and small judgments.
 search:
-  # One provider per call by kind, falling through on failure; brave is always the last
-  # fallback (strat/search.py moves it to the end whatever is written here).
-  # Order of tavily and exa set by the Russian query test, 2026-11-14: config/search-eval.md.
-  # Exa scored above Tavily on keyword and text; on semantic the heuristic favoured Tavily but a
-  # result-by-result check found Exa on topic far more often, so Exa leads everywhere.
-  keyword: [exa, tavily, brave]
-  text: [exa, tavily, brave]
+  # One provider per call by kind, in this order, falling through on failure.
+  # Order set by the Russian query test, 2026-11-14 (config/search-eval.md): Brave scored best
+  # on keyword and text queries and is the cheapest and fastest, so it leads there; on semantic
+  # queries a result-by-result check found Exa on topic far more often than Tavily or Brave.
+  keyword: [brave, exa, tavily]
+  text: [brave, exa, tavily]
   semantic: [exa, tavily, brave]
   # Price per call in USD for the cost log, from the vendors' pricing pages, checked 2026-11-14:
   # brave  - brave.com/search/api: Search plan 5 USD per 1000 requests (5 USD free credit/month).

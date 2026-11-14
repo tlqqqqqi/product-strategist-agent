@@ -102,7 +102,7 @@ def three(monkeypatch, brave):
 
     monkeypatch.setattr(providers, "post_json", fake_post)
     routes = {"search": {"keyword": ["tavily", "exa", "brave"], "text": ["tavily", "brave"],
-                         "semantic": ["brave", "exa"],
+                         "semantic": ["exa", "brave"],
                          "usd_per_call": {"brave": 0.005, "tavily": 0.008, "exa": 0.007}}}
     monkeypatch.setattr(search, "load_config", lambda name: routes)
     for key in ("TAVILY_API_KEY", "EXA_API_KEY"):
@@ -110,13 +110,17 @@ def three(monkeypatch, brave):
     return fail, posts
 
 
-def test_brave_is_always_last_in_every_chain(monkeypatch):
+def test_chain_follows_routes_order_as_written(monkeypatch):
+    """The order per kind is the one in routes.yaml (set by the Russian query test); a kind
+    with no entry falls back to every provider, Brave first."""
     from strat import search
 
     monkeypatch.setattr(search, "load_config",
-                        lambda name: {"search": {"semantic": ["brave", "exa"]}})
-    assert search.chain("semantic") == ["exa", "brave"]
-    assert search.chain("keyword") == ["brave"]
+                        lambda name: {"search": {"semantic": ["exa", "tavily", "brave"],
+                                                 "keyword": ["brave", "exa", "tavily"]}})
+    assert search.chain("semantic") == ["exa", "tavily", "brave"]
+    assert search.chain("keyword") == ["brave", "exa", "tavily"]
+    assert search.chain("text") == ["brave", "exa", "tavily"]
 
 
 @pytest.mark.parametrize("kind", ["keyword", "text", "semantic"])
@@ -125,7 +129,7 @@ def test_real_routes_name_known_providers_and_prices(kind):
     from strat.core import load_config
 
     names = search.chain(kind)
-    assert names[-1] == "brave"
+    assert sorted(names) == ["brave", "exa", "tavily"]  # every provider stays a fallback
     prices = load_config("routes")["search"]["usd_per_call"]
     for name in names:
         assert name in ("brave", "tavily", "exa") and prices[name] > 0

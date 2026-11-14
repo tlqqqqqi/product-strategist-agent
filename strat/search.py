@@ -26,12 +26,13 @@ STOP_AND_ASK = ("Do not retry: stop and ask the user how to proceed - add one ke
                 "own web search tool and save each page with `strat read <url> --step ID`.")
 
 
+DEFAULT_CHAIN = ["brave", "exa", "tavily"]
+
+
 def chain(kind: str) -> list[str]:
+    """Providers for a kind, in the order routes.yaml gives (set by the Russian query test)."""
     routes = load_config("routes").get("search", {})
-    names = list(routes.get(kind) or [])
-    if "brave" in names:  # brave is always the last fallback
-        names.remove("brave")
-    return names + ["brave"]
+    return list(routes.get(kind) or DEFAULT_CHAIN)
 
 
 def search(query: str, step: str, case: str | None = None, kind: str = "keyword",
