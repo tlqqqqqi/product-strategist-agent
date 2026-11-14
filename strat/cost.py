@@ -64,6 +64,24 @@ def _price(usage: dict, p: dict) -> float:
             + usage.get("cache_read_input_tokens", 0) * p["cache_read"]) / 1_000_000
 
 
+def _next_case_created(created: str | None) -> datetime | None:
+    """Calls after another case was created in this folder belong to that case."""
+    from strat.core import cases_dir, read_json
+
+    if not created:
+        return None
+    mine = datetime.fromisoformat(created)
+    later = []
+    for f in cases_dir().glob("*/state.json"):
+        try:
+            other = read_json(f).get("created")
+        except ValueError:
+            continue
+        if other and datetime.fromisoformat(other) > mine:
+            later.append(datetime.fromisoformat(other))
+    return min(later) if later else None
+
+
 def ide_usage(rows: list[dict], created: str | None) -> dict:
     """The IDE model's usage by stage, from Claude Code transcripts of this folder."""
     folder = transcripts_dir()
@@ -73,6 +91,7 @@ def ide_usage(rows: list[dict], created: str | None) -> dict:
                         "not known to the CLI"}
     prices = load_config("prices")
     since = (datetime.fromisoformat(created) - timedelta(minutes=15)) if created else None
+    until = _next_case_created(created)
     marks = [(datetime.fromisoformat(r["ts"]), r["stage"]) for r in rows]
     calls: dict[str, tuple[datetime, str, dict]] = {}
     for f in folder.glob("*.jsonl"):
@@ -85,10 +104,10 @@ def ide_usage(rows: list[dict], created: str | None) -> dict:
             if (d.get("type") != "assistant" or not msg.get("usage") or not d.get("timestamp")
                     or msg.get("model") == "<synthetic>"):  # local placeholders, no API call
                 continue
-            if d.get("cwd") and Path(d["cwd"]).resolve() != root():
+            if not d.get("cwd") or Path(d["cwd"]).resolve() != root():
                 continue
             ts = datetime.fromisoformat(d["timestamp"].replace("Z", "+00:00"))
-            if since and ts < since:
+            if (since and ts < since) or (until and ts >= until):
                 continue
             calls[msg.get("id") or f"{f.name}:{d['timestamp']}"] = (ts, msg.get("model", ""),
                                                                      msg["usage"])

@@ -79,3 +79,23 @@ def test_ide_usage_is_priced_and_assigned_to_stages(strat, case, tmp_path, monke
     assert ide["gate1"]["usd"] == 2.0 + 0.2 + 8.0          # output + cache read + 1h write
     assert d["ide"]["total"]["usd"] == 14.2 and d["ide"]["source"] == "claude-code transcripts"
     assert "IDE model" in strat("cost").out
+
+
+def test_ide_usage_of_a_later_case_is_not_counted(strat, case, cases, tmp_path, monkeypatch):
+    from strat.core import root
+
+    write_log(case, [row("intake.brief", "intake", "2026-11-15T10:00:00+03:00")])
+    other = json.loads((case / "state.json").read_text())
+    other["created"] = "2026-11-15T11:00:00+03:00"
+    (cases / "later").mkdir()
+    (cases / "later" / "state.json").write_text(json.dumps(other))
+    tdir = tmp_path / "transcripts"
+    tdir.mkdir()
+    cwd = str(root())
+    (tdir / "s.jsonl").write_text("\n".join([
+        transcript_line("2026-11-15T07:05:00Z", cwd=cwd, input_tokens=1_000_000),  # this case
+        transcript_line("2026-11-15T08:30:00Z", cwd=cwd, input_tokens=1_000_000),  # later case
+        transcript_line("2026-11-15T07:06:00Z", input_tokens=1_000_000),           # no cwd
+    ]) + "\n")
+    monkeypatch.setenv("STRAT_TRANSCRIPTS", str(tdir))
+    assert strat("cost", "--case", "demo", "--json").data["ide"]["total"]["usd"] == 4.0

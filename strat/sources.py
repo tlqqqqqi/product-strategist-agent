@@ -215,8 +215,8 @@ def register(cdir: Path, *, kind: str, origin: str, title: str, text: str, diges
 
 AI_INSTRUCTION = re.compile(
     r"игнориру\w*\s+(?:все\s+)?(?:предыдущ|прежн)\w*\s+инструкц|ignore\s+(?:all\s+)?(?:previous|prior)"
-    r"\s+instructions|(?:для|to)\s+(?:ии|ai)[-\s]?(?:ассистент|assistant)|system\s+prompt|"
-    r"как\s+ии\b|as\s+an\s+ai\b", re.I)
+    r"\s+instructions|disregard\s+(?:all\s+)?(?:previous|prior|earlier|the\s+above)|"
+    r"(?:для|to)\s+(?:ии|ai)[-\s]?(?:ассистент|assistant)|system\s+prompt", re.I)
 
 
 def flags_of(text: str) -> list[str]:
