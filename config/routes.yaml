@@ -31,11 +31,13 @@ models:
 # fixed answer format, then the IDE agent itself (exit 3, the answer is stored with by=agent).
 judge:
   # Jev model: jev/jev-1.14.0, pinned so verdicts do not move between runs. Chosen over
-  # jev/laya-multilingual from the model pages only: laya refuses any question over 1,024 tokens
-  # including state, instructions and labels, and a claim with its quote and the instructions
-  # can pass that; jev-1.14 has 32K context and its release notes name the largest gains in
-  # languages other than English. NOT compared live on Russian claims yet (no AnyModel key in
-  # this build); STRAT_JEV_MODEL in .env overrides it.
+  # jev/laya-multilingual by a live run on 2026-11-14: the same 5 Russian questions on the
+  # sample case (support yes, support with a wrong price, contradiction, type of a hypothesis,
+  # sufficiency of one survey figure for a conclusion). jev-1.14.0 answered all 5 as expected
+  # with p 0.94-0.97 (or 0.01-0.10 for "no"). laya-multilingual said a claim of 399 RUB is
+  # supported by a quote of 349 RUB with p=0.93 (a confident wrong yes), and fell to 0.20 on the
+  # type question. laya also refuses anything over 1,024 tokens. Both cost well under 0.001 USD
+  # per question. STRAT_JEV_MODEL in .env overrides this value.
   jev_model: jev/jev-1.14.0
   # Below this calibrated probability Jev's answer escalates to the main model (the IDE agent).
   # About 0.8, after the Jev paper's suggested cut-off for "is the evidence sufficient".
