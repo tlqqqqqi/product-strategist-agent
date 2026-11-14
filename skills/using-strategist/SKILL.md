@@ -40,6 +40,7 @@ Skills for a task at any stage:
 | The memo as a page (`memo.html`), after sign-off or when the memo changes | `skills/report/SKILL.md` |
 | Screenshots of a public product flow (a competitor's tariff page, onboarding) | `skills/ux-capture/SKILL.md` |
 | A figure that needs a calculation, or figures compared across tables | `skills/data-analysis/SKILL.md` |
+| An audio or video file among the materials | `skills/media/SKILL.md` |
 
 Read the skill file before you act on a stage. Method knowledge is in `knowledge/` (start at
 `knowledge/INDEX.md`); document templates are in `knowledge/templates/`.
