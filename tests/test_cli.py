@@ -39,6 +39,9 @@ SAMPLES = {
     "report": ["report"],
     "replay export": ["replay", "export"],
     "analysis check": ["analysis", "check", "S001"],
+    "interview add": ["interview", "add", "t.txt", "--mask", "A", "--persona", "p", "--step", "s"],
+    "interview persona": ["interview", "persona", "p.md", "--guide", "g.md", "--step", "s",
+                          "--questions", "3"],
 }
 
 

@@ -43,6 +43,8 @@ COMMANDS: dict[str, str] = {
     "report": "report:report",
     "replay export": "replay:export",
     "analysis check": "analysis:check",
+    "interview add": "interview:add",
+    "interview persona": "interview:persona",
 }
 
 
@@ -220,11 +222,30 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--all", dest="all_", action="store_true")
     p.set_defaults(target="analysis check")
 
+    interview = sub.add_parser("interview", help="interview transcripts and model respondents")
+    isub = interview.add_subparsers(dest="interview_cmd", required=True)
+    p = _cmd(isub, "add", "register a transcript with phones, e-mails and given names masked; "
+                          "with --persona, import a model respondent's session as synthetic")
+    p.add_argument("path")
+    p.add_argument("--title", default=None)
+    p.add_argument("--mask", default=None,
+                   help="comma-separated names or other words to replace with [ИМЯ]")
+    p.add_argument("--persona", default=None,
+                   help="the file is a persona session run by a native subagent: its name")
+    p.add_argument("--step", default=None)
+    p.set_defaults(target="interview add")
+    p = _cmd(isub, "persona", "run a model respondent through a guide on the peer model")
+    p.add_argument("persona_file")
+    p.add_argument("--guide", required=True)
+    p.add_argument("--step", required=True)
+    p.add_argument("--questions", type=int, default=None, help="ask at most this many questions")
+    p.set_defaults(target="interview persona")
+
     return parser
 
 
 _INTERNAL = {"command", "target", "gate_cmd", "source_cmd", "claim_cmd", "replay_cmd",
-             "analysis_cmd"}
+             "analysis_cmd", "interview_cmd"}
 
 
 def resolve(target: str):

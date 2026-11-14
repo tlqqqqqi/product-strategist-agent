@@ -191,6 +191,26 @@ def _check_supports(claims: list[dict], ids: list[str], type_: str) -> None:
         if type_ == "fact" and target["type"] in NOT_A_FACT_BASE:
             raise StratError(f"{sid} is a {target['type']}: a {target['type']} can never be the "
                              "source of a fact")
+    if type_ == "fact":  # nor through a chain: a hypothesis built on a model respondent
+        seen, stack = set(), list(ids)
+        while stack:
+            cid = stack.pop()
+            if cid in seen or cid not in index:
+                continue
+            seen.add(cid)
+            if index[cid]["type"] == "synthetic":
+                raise StratError(f"--supports reaches {cid}, a synthetic claim (model respondent "
+                                 "or invented data): a fact can never rest on it")
+            stack += index[cid].get("supports", [])
+
+
+def _check_synthetic_source(cdir: Path, source: str, type_: str) -> None:
+    """A model respondent's session (a synthetic source) backs only `synthetic` claims."""
+    entry = sources.get(cdir, source)
+    if entry and entry.get("synthetic") and type_ != "synthetic":
+        raise StratError(f"{source} is a model respondent's session (synthetic, not a person): a "
+                         f"claim citing it must be --type synthetic, not {type_}; build a "
+                         "hypothesis on that claim with --supports")
 
 
 def add(type_: str, kind: str, text: str, case: str | None = None, source: str | None = None,
@@ -241,6 +261,7 @@ def add(type_: str, kind: str, text: str, case: str | None = None, source: str |
         if not sources.SOURCE_ID.match(source) or sources.get(cdir, source) is None:
             raise StratError(f"unknown source {source}: register it with `strat source add` or "
                              "`strat read` first")
+        _check_synthetic_source(cdir, source, type_)
         if quote:
             ok, label = sources.check_located_quote(cdir, source, where, quote)
             if not ok:
@@ -373,6 +394,7 @@ def confirm(claim_id: str, source: str, where: str, quote: str, as_of: str,
         raise StratError(f"--as-of {as_of} is not newer than {c['as_of']}")
     if sources.get(cdir, source) is None:
         raise StratError(f"unknown source {source}")
+    _check_synthetic_source(cdir, source, c["type"])
     ok, label = sources.check_located_quote(cdir, source, where, quote)
     if not ok:
         raise StratError(f"quote not found in {label}")

@@ -32,6 +32,7 @@ models:
     jev/jev-1.14.0: 0.50
     jev/laya-multilingual: 1.00
     ds/deepseek-v4-flash: 0.0125
+    glm/glm-5: 0.025          # x0.5, GET /v1/models billing coefficient, read 2026-11-14
   # A model not listed above is logged with this rate and marked "estimate" in the log note.
   default_usd_per_mtok: 2.00
 
@@ -81,3 +82,14 @@ media:
   timeout_sec: 300
   # Local fallback: faster-whisper or openai-whisper, this model size.
   whisper_model: small
+
+# strat interview persona: a model respondent plays an invented persona through a guide, one
+# chat call per question on the peer endpoint (STRAT_PEER_*). Output is always synthetic.
+persona:
+  # A different vendor from the IDE agent, so the respondent does not share the analyst's
+  # habits; GLM-5 answers in natural Russian and costs x0.5 in AnyModel's catalog (2026-11-14).
+  # Empty means STRAT_PEER_MODEL.
+  model: glm/glm-5
+  temperature: 0.7      # some variety between answers, as between people
+  max_tokens: 600       # 2-6 sentences per answer, with room for a reasoning model to think
+  max_questions: 8      # a short interview; --questions lowers it
