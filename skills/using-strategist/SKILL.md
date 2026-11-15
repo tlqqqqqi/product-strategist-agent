@@ -73,6 +73,10 @@ Read the skill file before you act on a stage. Method knowledge is in `knowledge
 8. **Budget.** The state shows the budget. Stop and ask before an action that would exceed it.
 9. **No personal data** in cases. Only open sources and the user's own materials. The browser
    never submits forms, logs in, signs up or pays.
+10. **Stay in the folder root.** Run every command from the folder that holds `bin/` as
+    `bin/strat ...`, one command per call, never after `cd cases/...` and never chained with
+    `&&` or loops: paths into the case are `cases/<id>/...`. The IDE allows `bin/strat` without a
+    prompt only in that form.
 
 ## Commands you will use most
 
