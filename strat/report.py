@@ -7,6 +7,13 @@ text, source, `where` and quote; conclusions also link the claims they rest on. 
 carry a visible label next to the citation. Markdown is converted by a small stdlib converter
 for the subset the templates use: headings, bullets, numbered lists, tables, paragraphs, bold,
 inline code, links, `>` notes and fenced code. Everything from claims and sources is escaped.
+
+Memo blocks (strat/blocks.py) are drawn with fixed code: `tiles` and `table` as HTML, `bars`,
+`slope` and `funnel` as HTML rows whose bar width is a CSS percentage (text stays readable at
+360 px), `line` as an inline SVG on a 4 px grid with its labels in HTML below. Each value links
+to its claim card. If the case has `table.md`, its options-by-criteria table is shown under
+"Таблица решения" with the option chosen at Gate 2 marked. Elements carry `data-types` with the
+types of the claims they cite, for the claim-type filter at the top of the page.
 """
 
 from __future__ import annotations
@@ -16,8 +23,9 @@ import re
 import sys
 from pathlib import Path
 
-from strat import ledger, sources, validate
+from strat import blocks, ledger, sources, validate
 from strat.core import FAILED, StratError, case_path, emit, root, today
+from strat.state import load as load_state
 
 TEMPLATE = "memo.html"
 TYPE_LABEL = {"fact": "факт", "hypothesis": "гипотеза", "forecast": "прогноз",
@@ -92,7 +100,263 @@ def inline(text: str, claims: dict) -> str:
     return out
 
 
-# --- blocks -----------------------------------------------------------------------------------
+def types_attr(text: str, claims: dict) -> str:
+    return types_of(ledger.cited_ids(text), claims)
+
+
+def types_of(ids: list[str], claims: dict) -> str:
+    found = sorted({claims[c]["type"] for c in ids if c in claims})
+    return f' data-types="{" ".join(found)}"' if found else ""
+
+
+# --- memo blocks ------------------------------------------------------------------------------
+
+def g4(value: float) -> int:
+    """Snap a coordinate to the 4 px grid."""
+    return int(round(value / 4.0)) * 4
+
+
+def _value_link(row: blocks.Row, k: int, unit: str = "") -> str:
+    target = row.ids[0] if row.ids else ""
+    u = f'<span class="u">{esc(unit)}</span>' if unit else ""
+    return f'<a class="v" href="#{target}">{esc(row.shown[k])}</a>{u}'
+
+
+def _focal(block: blocks.Block, key) -> int | None:
+    marked = [i for i, r in enumerate(block.rows) if r.focal]
+    if marked:
+        return marked[0]
+    if key is None or not block.rows:
+        return None
+    return max(range(len(block.rows)), key=lambda i: key(block.rows[i]))
+
+
+def _caption(block: blocks.Block, claims: dict) -> str:
+    unit = f'<span class="blk-unit">{esc(block.unit)}</span>' if block.unit else ""
+    return f'<figcaption><span class="blk-title">{esc(block.title)}</span>{unit}</figcaption>'
+
+
+def _sources(block: blocks.Block, claims: dict) -> str:
+    ids: list[str] = []
+    for r in block.rows:
+        ids += [c for c in r.ids if c not in ids]
+    return f'<p class="blk-src">Основание: {cite_html(ids, claims)}</p>' if ids else ""
+
+
+def _row_unit(block: blocks.Block, row: blocks.Row) -> str:
+    return "" if block.unit else row.unit
+
+
+def _pct(value: float, top: float) -> str:
+    if top <= 0:
+        return "0"
+    return f"{max(value / top * 100, 0.5):.1f}".rstrip("0").rstrip(".")
+
+
+def _bars(block: blocks.Block, claims: dict) -> str:
+    top = max((r.values[0] for r in block.rows), default=0)
+    focal = _focal(block, lambda r: r.values[0])
+    rows = []
+    for i, r in enumerate(block.rows):
+        cls = " focal" if i == focal else ""
+        rows.append(f'<li class="blk-row{cls}"{types_of(r.ids, claims)}>'
+                    f'<span class="blk-l">{esc(r.label)}</span>'
+                    f'<span class="blk-track"><span class="blk-bar" style="width:'
+                    f'{_pct(r.values[0], top)}%"></span></span>'
+                    f'<span class="blk-v">{_value_link(r, 0, _row_unit(block, r))}</span></li>')
+    return f'<ol class="blk-rows">{"".join(rows)}</ol>'
+
+
+def _slope(block: blocks.Block, claims: dict) -> str:
+    cols = block.columns if len(block.columns) == 2 else ["до", "после"]
+    top = max((v for r in block.rows for v in r.values), default=0)
+    focal = _focal(block, lambda r: abs(r.values[1] - r.values[0]))
+    rows = []
+    for i, r in enumerate(block.rows):
+        cls = " focal" if i == focal else ""
+        unit = _row_unit(block, r)
+        pair = "".join(
+            f'<span class="blk-pair p{k}"><span class="blk-c">{esc(cols[k])}</span>'
+            f'<span class="blk-track"><span class="blk-bar" style="width:'
+            f'{_pct(r.values[k], top)}%"></span></span>'
+            f'<span class="blk-v">{_value_link(r, k, unit)}</span></span>' for k in (0, 1))
+        rows.append(f'<li class="blk-row{cls}"{types_of(r.ids, claims)}>'
+                    f'<span class="blk-l">{esc(r.label)}</span>{pair}</li>')
+    return f'<ol class="blk-rows">{"".join(rows)}</ol>'
+
+
+def _funnel(block: blocks.Block, claims: dict) -> str:
+    top = max((r.values[0] for r in block.rows), default=0)
+    focal = _focal(block, None)
+    rows = []
+    for i, r in enumerate(block.rows):
+        cls = " focal" if i == focal else ""
+        rows.append(f'<li class="blk-row{cls}"{types_of(r.ids, claims)}>'
+                    f'<span class="blk-l">{esc(r.label)} '
+                    f'<span class="blk-v">{_value_link(r, 0, _row_unit(block, r))}</span></span>'
+                    f'<span class="blk-track"><span class="blk-bar" style="width:'
+                    f'{_pct(r.values[0], top)}%"></span></span></li>')
+    return f'<ol class="blk-rows">{"".join(rows)}</ol>'
+
+
+def _line(block: blocks.Block, claims: dict) -> str:
+    width, height, left, right, upper, lower = 400, 160, 8, 392, 16, 144
+    vals = [r.values[0] for r in block.rows]
+    lo, hi = min(vals), max(vals)
+    n = len(vals)
+    focal = _focal(block, None)
+    focal = n - 1 if focal is None else focal
+
+    def x(i: int) -> int:
+        return g4(left + (right - left) * (i / (n - 1) if n > 1 else 0.5))
+
+    def y(v: float) -> int:
+        return g4((upper + lower) / 2 if hi == lo else lower - (v - lo) / (hi - lo) * (lower - upper))
+
+    points = " ".join(f"{x(i)},{y(v)}" for i, v in enumerate(vals))
+    dots = "".join(
+        f'<a href="#{r.ids[0] if r.ids else ""}"><circle class="mark{" focal" if i == focal else ""}"'
+        f' cx="{x(i)}" cy="{y(r.values[0])}" r="4"/></a>' for i, r in enumerate(block.rows))
+    svg = (f'<svg class="blk-plot" viewBox="0 0 {width} {height}" width="100%" '
+           f'preserveAspectRatio="xMidYMid meet" role="img" aria-label="{esc(block.title)}">'
+           f'<line class="axis" x1="0" y1="{height - 4}" x2="{width}" y2="{height - 4}"/>'
+           f'<polyline class="trace" points="{points}"/>{dots}</svg>')
+    labels = "".join(
+        f'<li class="blk-pt{" focal" if i == focal else ""}"{types_of(r.ids, claims)}>'
+        f'<span class="blk-v">{_value_link(r, 0, _row_unit(block, r))}</span>'
+        f'<span class="blk-l">{esc(r.label)}</span></li>' for i, r in enumerate(block.rows))
+    return svg + f'<ol class="blk-points">{labels}</ol>'
+
+
+def _tiles(block: blocks.Block, claims: dict) -> str:
+    tiles = []
+    for r in block.rows:
+        cls = " focal" if r.focal else ""
+        note = f'<span class="tile-n">{esc(r.note)}</span>' if r.note else ""
+        tiles.append(f'<li class="tile{cls}"{types_of(r.ids, claims)}>'
+                     f'<span class="tile-v">{_value_link(r, 0, r.unit or block.unit)}</span>'
+                     f'<span class="tile-l">{esc(r.label)}</span>{note}'
+                     f'{cite_html(r.ids, claims)}</li>')
+    return f'<ul class="tiles">{"".join(tiles)}</ul>'
+
+
+def _table(block: blocks.Block, claims: dict) -> str:
+    parts = ['<div class="table-wrap"><table>']
+    if block.header:
+        parts.append("<thead><tr>" + "".join(f"<th>{inline(c, claims)}</th>"
+                                             for c in block.header) + "</tr></thead>")
+    parts.append("<tbody>")
+    for r in block.rows:
+        cls = ' class="focal"' if r.cells and r.cells[0].rstrip().endswith("*") else ""
+        cells = list(r.cells)
+        if cls:
+            cells[0] = cells[0].rstrip()[:-1].rstrip()
+        parts.append(f"<tr{cls}{types_of(r.ids, claims)}>"
+                     + "".join(f"<td>{inline(c, claims)}</td>" for c in cells) + "</tr>")
+    parts.append("</tbody></table></div>")
+    return "".join(parts)
+
+
+DRAW = {"bars": _bars, "slope": _slope, "funnel": _funnel, "line": _line, "tiles": _tiles,
+        "table": _table}
+
+
+def block_html(block: blocks.Block, claims: dict) -> str:
+    inner = DRAW[block.kind](block, claims)
+    src = "" if block.kind in ("tiles", "table") else _sources(block, claims)
+    return (f'<figure class="blk blk-{block.kind}">{_caption(block, claims)}{inner}{src}'
+            "</figure>")
+
+
+# --- decision table ---------------------------------------------------------------------------
+
+OPTION = re.compile(r"^\s*(?:\*\*)?\s*Вариант\s+(\d+)", re.I)
+DECISION_HEADING = "## Варианты против критериев"
+
+
+def decision_rows(cdir: Path) -> list[tuple[int, str]]:
+    """The options-by-criteria table of table.md: (line number, line)."""
+    path = cdir / "table.md"
+    if not path.is_file():
+        return []
+    lines = path.read_text(encoding="utf-8").splitlines()
+    start = next((i for i, t in enumerate(lines) if t.strip() == DECISION_HEADING), None)
+    if start is None:
+        return []
+    rows: list[tuple[int, str]] = []
+    for i in range(start + 1, len(lines)):
+        t = lines[i]
+        if t.startswith("#"):
+            break
+        if validate.TABLE_ROW.match(t):
+            rows.append((i + 1, t))
+        elif rows and t.strip():
+            break
+    return rows
+
+
+def decision_errors(rows: list[tuple[int, str]], claims: dict, life: dict) -> list[str]:
+    errors = []
+    for line, text in rows:
+        for cid in ledger.cited_ids(text):
+            claim = claims.get(cid)
+            if claim is None:
+                errors.append(f"table.md:{line}: {cid} does not exist")
+            elif ledger.status_of(claim, life) in ("withdrawn", "stale"):
+                errors.append(f"table.md:{line}: {cid} is {ledger.status_of(claim, life)}")
+    return errors
+
+
+def decision_html(rows: list[tuple[int, str]], claims: dict, chosen) -> str:
+    lines = [t for _, t in rows]
+    if not lines:
+        return ""
+    head = None
+    if len(lines) > 1 and validate.SEPARATOR.match(lines[1]):
+        head, lines = lines[0], lines[2:]
+    lines = [t for t in lines if not validate.SEPARATOR.match(t)]
+
+    def is_chosen(cell: str) -> bool:
+        m = OPTION.match(cell)
+        return bool(m and chosen is not None and int(m.group(1)) == int(chosen))
+
+    col = None
+    if head is not None:
+        col = next((k for k, c in enumerate(_cells(head)) if is_chosen(c)), None)
+    mark = '<span class="chosen-mark">выбран</span>'
+    parts = ['<section class="decision"><h2>Таблица решения</h2><div class="table-wrap"><table>']
+    if head is not None:
+        parts.append("<thead><tr>" + "".join(
+            f'<th class="chosen">{inline(c, claims)} {mark}</th>' if k == col
+            else f"<th>{inline(c, claims)}</th>" for k, c in enumerate(_cells(head)))
+            + "</tr></thead>")
+    parts.append("<tbody>")
+    for t in lines:
+        cells = _cells(t)
+        row_chosen = bool(cells) and is_chosen(cells[0])
+        tds = []
+        for k, c in enumerate(cells):
+            cls = ' class="chosen"' if row_chosen or k == col else ""
+            extra = f" {mark}" if row_chosen and k == 0 else ""
+            tds.append(f"<td{cls}{types_attr(c, claims)}>{inline(c, claims)}{extra}</td>")
+        parts.append(f"<tr{types_attr(t, claims)}>" + "".join(tds) + "</tr>")
+    parts.append("</tbody></table></div></section>")
+    return "".join(parts)
+
+
+# --- claim-type filter ------------------------------------------------------------------------
+
+def filter_html(ids: list[str], claims: dict) -> str:
+    present = [t for t in ledger.TYPES if any(claims[c]["type"] == t for c in ids)]
+    if not present:
+        return ""
+    chips = "".join(f'<button type="button" class="chip t-{t}" data-type="{t}" '
+                    f'aria-pressed="false">{ledger.TYPE_RU[t].lower()}</button>' for t in present)
+    return (f'<nav class="type-filter" hidden aria-label="Подсветить утверждения по типу">'
+            f'<span class="meta">Подсветить:</span>{chips}</nav>')
+
+
+# --- markdown ---------------------------------------------------------------------------------
 
 def _cells(line: str) -> list[str]:
     line = line.strip()
@@ -112,6 +376,11 @@ def md_to_html(text: str, claims: dict) -> str:
         stripped = line.strip()
         if not stripped:
             i += 1
+            continue
+        if blocks.block_type(line):
+            block = blocks.parse(lines, i)
+            out.append(block_html(block, claims))
+            i = block.end
             continue
         if stripped.startswith(validate.FENCE):
             fence, body = stripped[:3], []
@@ -134,7 +403,8 @@ def md_to_html(text: str, claims: dict) -> str:
                 quote.append(lines[i].strip()[1:].strip())
                 i += 1
             paras = " ".join(quote).strip()
-            out.append(f"<blockquote><p>{inline(paras, claims)}</p></blockquote>")
+            out.append(f"<blockquote{types_attr(paras, claims)}><p>{inline(paras, claims)}</p>"
+                       "</blockquote>")
             continue
         if validate.TABLE_ROW.match(line):
             rows = []
@@ -152,8 +422,9 @@ def md_to_html(text: str, claims: dict) -> str:
             for row in rows:
                 if validate.SEPARATOR.match(row):
                     continue
-                parts.append("<tr>" + "".join(f"<td>{inline(c, claims)}</td>"
-                                              for c in _cells(row)) + "</tr>")
+                parts.append(f"<tr{types_attr(row, claims)}>"
+                             + "".join(f"<td>{inline(c, claims)}</td>" for c in _cells(row))
+                             + "</tr>")
             parts.append("</tbody></table></div>")
             out.append("".join(parts))
             continue
@@ -169,8 +440,8 @@ def md_to_html(text: str, claims: dict) -> str:
                 else:
                     break
                 i += 1
-            out.append(f"<{tag}>" + "".join(f"<li>{inline(it, claims)}</li>" for it in items)
-                       + f"</{tag}>")
+            out.append(f"<{tag}>" + "".join(f"<li{types_attr(it, claims)}>{inline(it, claims)}</li>"
+                                            for it in items) + f"</{tag}>")
             continue
         para = []
         while i < n:
@@ -181,7 +452,8 @@ def md_to_html(text: str, claims: dict) -> str:
                 break
             para.append(s)
             i += 1
-        out.append(f"<p>{inline(' '.join(para), claims)}</p>")
+        text = " ".join(para)
+        out.append(f"<p{types_attr(text, claims)}>{inline(text, claims)}</p>")
     return "\n".join(out)
 
 
@@ -262,11 +534,21 @@ def card_html(claim: dict, claims: dict, index: dict, life: dict) -> str:
 
 # --- page -------------------------------------------------------------------------------------
 
+def with_decision(body: str, decision: str) -> str:
+    """The decision table goes before the memo's "Материалы" section, else at the end."""
+    if not decision:
+        return body
+    at = body.find("<h2>Материалы</h2>")
+    return body + "\n" + decision if at < 0 else body[:at] + decision + "\n" + body[at:]
+
+
 def render(cdir: Path, memo: str) -> tuple[str, int]:
     claims = ledger.by_id(ledger.load(cdir))
     index = {s["id"]: s for s in sources.index(cdir)}
     life = ledger.shelf_life()
-    ids = shown_ids(memo, claims)
+    rows = decision_rows(cdir)
+    decision = decision_html(rows, claims, load_state(cdir).get("chosen_option"))
+    ids = shown_ids(memo + "\n" + "\n".join(t for _, t in rows), claims)
     title = next((m.group(2) for m in map(_HEADING.match, memo.splitlines())
                   if m and len(m.group(1)) == 1), "Записка")
     counts = {t: sum(1 for c in ids if claims[c]["type"] == t) for t in ledger.TYPES}
@@ -276,7 +558,8 @@ def render(cdir: Path, memo: str) -> tuple[str, int]:
                      for t in ledger.TYPES if counts[t])
     values = {
         "TITLE": esc(re.sub(r"\[[^\]]*\]", "", title).strip()),
-        "BODY": md_to_html(memo, claims),
+        "BODY": with_decision(md_to_html(memo, claims), decision),
+        "FILTER": filter_html(ids, claims),
         "SUMMARY": esc(summary),
         "LEGEND": legend,
         "CLAIMS": "\n".join(card_html(claims[c], claims, index, life) for c in ids),
@@ -295,7 +578,9 @@ def report(case: str | None = None, as_json: bool = False) -> int:
         raise StratError(f"memo.md not found in cases/{cdir.name}: write it at sign-off first "
                          "(skills/signoff)")
     claims = ledger.load(cdir)
-    errors = validate.citation_errors(cdir, "memo.md", ledger.by_id(claims), ledger.shelf_life())
+    index, life = ledger.by_id(claims), ledger.shelf_life()
+    errors = validate.citation_errors(cdir, "memo.md", index, life)
+    errors += decision_errors(decision_rows(cdir), index, life)
     if errors:
         for e in errors:
             print(e, file=sys.stderr)

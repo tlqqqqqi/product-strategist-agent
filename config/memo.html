@@ -7,8 +7,11 @@
 <title>{{TITLE}}</title>
 <style>
 :root {
-  --bg: #fbfaf7; --fg: #1d1c1a; --muted: #6b675f; --line: #e3dfd6; --card: #ffffff;
-  --accent: #1f5fa8; --accent-bg: #e8f0fa;
+  /* base tokens, defined once; everything else uses them */
+  --paper: #fbfaf7; --ink: #1d1c1a; --muted: #6b675f; --hairline: #e3dfd6;
+  --accent: #1f5fa8; --accent-soft: #e8f0fa;
+  --bg: var(--paper); --fg: var(--ink); --line: var(--hairline); --card: #ffffff;
+  --accent-bg: var(--accent-soft);
   --fact: #2f6b3a; --fact-bg: #e6f2e7;
   --soft: #8a5a00; --soft-bg: #fbf0d9;
   --warn: #9b2c2c; --warn-bg: #fbe5e3;
@@ -16,8 +19,8 @@
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #161514; --fg: #ebe8e2; --muted: #a29d93; --line: #34312d; --card: #1f1e1c;
-    --accent: #8ab8ec; --accent-bg: #1d2a3a;
+    --paper: #161514; --ink: #ebe8e2; --muted: #a29d93; --hairline: #34312d;
+    --accent: #8ab8ec; --accent-soft: #1d2a3a; --card: #1f1e1c;
     --fact: #8fd19b; --fact-bg: #1c2c1f;
     --soft: #e8c06f; --soft-bg: #33290f;
     --warn: #f2a19a; --warn-bg: #3a1e1c;
@@ -92,12 +95,57 @@ dialog button {
   font: inherit; font-size: .9rem; padding: 4px 12px; border-radius: 6px; cursor: pointer;
   border: 1px solid var(--line); background: var(--bg); color: var(--fg);
 }
+/* memo blocks: minimal, class-based; the visual design is redone in task 17d */
+.blk { margin: 16px 0 20px; padding: 0; font-variant-numeric: tabular-nums; }
+.blk figcaption { margin: 0 0 8px; font-weight: 600; }
+.blk-unit { color: var(--muted); font-weight: 400; }
+.blk-unit::before { content: ", "; }
+.blk a.v { color: var(--ink); text-decoration: none; font-weight: 600; }
+.blk a.v:hover, .blk a.v:focus-visible { text-decoration: underline; }
+.blk .u { color: var(--muted); margin-left: 2px; }
+.blk-rows { list-style: none; margin: 0; padding: 0; }
+.blk-row { margin: 0 0 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
+.blk-bars .blk-row { grid-template-columns: minmax(0, 1fr) auto; }
+.blk-bars .blk-l { grid-column: 1 / -1; }
+.blk-l { color: var(--ink); overflow-wrap: anywhere; }
+.blk-track { display: block; height: 12px; border-bottom: 1px solid var(--hairline); }
+.blk-bar { display: block; height: 12px; background: var(--muted); opacity: .45; }
+.focal .blk-bar { background: var(--accent); opacity: 1; }
+.tile.focal a.v { color: var(--accent); }
+.blk-funnel .blk-row { text-align: center; }
+.blk-funnel .blk-track { border: 0; }
+.blk-funnel .blk-bar { margin: 0 auto; }
+.blk-pair { display: grid; grid-template-columns: 4rem minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.blk-c { color: var(--muted); font-size: .85rem; }
+.blk-plot { display: block; width: 100%; height: auto; }
+.blk-plot .axis { stroke: var(--hairline); stroke-width: 1; }
+.blk-plot .trace { fill: none; stroke: var(--muted); stroke-width: 2; }
+.blk-plot .mark { fill: var(--muted); }
+.blk-plot .mark.focal { fill: var(--accent); }
+.blk-points { list-style: none; margin: 4px 0 0; padding: 0; display: flex; justify-content: space-between; gap: 4px; }
+.blk-pt { display: flex; flex-direction: column; align-items: center; min-width: 0; font-size: .85rem; }
+.blk-pt .blk-l { color: var(--muted); }
+.blk-pt.focal a.v { color: var(--accent); }
+.blk-src { color: var(--muted); font-size: .85rem; margin: 4px 0 0; }
+.tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 8px; }
+.tile { border: 1px solid var(--hairline); border-radius: 4px; padding: 8px 12px; display: flex; flex-direction: column; gap: 4px; }
+.tile-v { font-size: 1.5rem; line-height: 1.2; }
+.tile-n { color: var(--muted); font-size: .88rem; }
+.blk-table tr.focal td, .decision td.chosen, .decision th.chosen { background: var(--accent-soft); }
+.chosen-mark { font-size: .8em; font-weight: 600; color: var(--accent); white-space: nowrap; }
+.type-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 16px; font-size: .85rem; }
+.type-filter .meta { margin: 0; }
+.chip { font: inherit; padding: 2px 8px; border-radius: 4px; cursor: pointer; border: 1px solid var(--hairline); background: var(--paper); color: var(--ink); }
+.chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+body[data-filter] main [data-types] { opacity: .35; }
+body[data-filter] main [data-types].hl { opacity: 1; }
 footer { margin-top: 32px; color: var(--muted); font-size: .85rem; }
-@media print { dialog, .legend { display: none; } a.cite { background: none; } }
+@media print { dialog, .legend, .type-filter { display: none; } a.cite { background: none; } }
 </style>
 </head>
 <body>
 <main>
+{{FILTER}}
 {{BODY}}
 <section id="claims" aria-labelledby="claims-h">
 <h2 id="claims-h">Утверждения, на которые ссылается записка</h2>
@@ -112,6 +160,25 @@ footer { margin-top: 32px; color: var(--muted); font-size: .85rem; }
 <div id="card-body"></div>
 </dialog>
 <script>
+(function () {
+  var nav = document.querySelector(".type-filter");
+  if (!nav) return;
+  nav.hidden = false;
+  nav.addEventListener("click", function (e) {
+    var chip = e.target.closest && e.target.closest(".chip");
+    if (!chip) return;
+    var type = chip.getAttribute("data-type");
+    var on = document.body.getAttribute("data-filter") !== type;
+    nav.querySelectorAll(".chip").forEach(function (c) {
+      c.setAttribute("aria-pressed", String(on && c === chip));
+    });
+    if (on) document.body.setAttribute("data-filter", type);
+    else document.body.removeAttribute("data-filter");
+    document.querySelectorAll("main [data-types]").forEach(function (el) {
+      el.classList.toggle("hl", on && el.getAttribute("data-types").split(" ").indexOf(type) >= 0);
+    });
+  });
+})();
 (function () {
   var dlg = document.getElementById("card");
   if (!dlg || typeof dlg.showModal !== "function") return;
