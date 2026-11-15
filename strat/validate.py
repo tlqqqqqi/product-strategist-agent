@@ -3,7 +3,9 @@
 Citation unit: every bullet (with its indented continuation lines), every table data row and
 every paragraph must cite at least one claim. Exempt: headings, blank lines, table header and
 separator rows, lines starting with `>`, fenced code. A cited id must exist, must not be
-withdrawn and must not be stale. Errors read `<file>:<line>: <reason>`.
+withdrawn and must not be stale. Fenced memo blocks (strat/blocks.py) are checked row by row:
+each row cites a claim and its numbers appear in that claim. Errors read
+`<file>:<line>: <reason>`.
 """
 
 from __future__ import annotations
@@ -12,7 +14,7 @@ import re
 import sys
 from pathlib import Path
 
-from strat import ledger, sources
+from strat import blocks, ledger, sources
 from strat.core import FAILED, StratError, case_path, emit, read_jsonl, root
 from strat.state import load as load_state
 from strat.state import save as save_state
@@ -83,7 +85,8 @@ def units(lines: list[str]) -> list[tuple[int, str]]:
 
 def citation_errors(cdir: Path, name: str, claims: dict, life: dict) -> list[str]:
     path = cdir / name
-    lines = path.read_text(encoding="utf-8").splitlines()
+    whole = path.read_text(encoding="utf-8")
+    lines = whole.splitlines()
     errors = []
     for start, text in units(lines):
         if PLACEHOLDER.search(text):
@@ -101,7 +104,7 @@ def citation_errors(cdir: Path, name: str, claims: dict, life: dict) -> list[str
             status = ledger.status_of(claim, life)
             if status in ("withdrawn", "stale"):
                 errors.append(f"{name}:{start}: {cid} is {status}")
-    return errors
+    return errors + blocks.errors(name, whole, claims, life)
 
 
 # --- headings ---------------------------------------------------------------------------------
