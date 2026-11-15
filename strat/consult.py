@@ -307,7 +307,9 @@ def set_verdict(cdir: Path, oid: str | None, verdict: str | None, reason: str | 
             raise StratError(f"the reason cites unknown claim(s): {', '.join(unknown)}")
     o["verdict"], o["reason"] = verdict, reason.strip()
     write_jsonl(cdir / "objections.jsonl", rows)
-    log_action(cdir, step=f"consult.verdict.{oid}.{len(o.get('debate', []))}",
+    prefix = f"consult.verdict.{oid}."
+    n = sum(1 for r in read_jsonl(cdir / "log.jsonl") if str(r.get("step", "")).startswith(prefix))
+    log_action(cdir, step=f"{prefix}{n}",
                tool="consult verdict", in_=oid, out="objections.jsonl",
                note=f"{verdict}: {reason.strip()[:200]}")
     emit(f"{oid}: {verdict}", o, as_json)

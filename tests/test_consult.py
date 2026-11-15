@@ -212,6 +212,8 @@ def test_gate3_refuses_an_open_major_or_critical_objection(strat, challenged):
     assert strat("consult", "verdict", "O003", "rejected", "--reason",
                  "Рост начался после повышения [C001]").code == 0
     assert "is open" not in strat("gate", "check", "3").err
+    steps = [r["step"] for r in read_jsonl(challenged / "log.jsonl") if r["tool"] == "consult verdict"]
+    assert len(steps) == len(set(steps)), steps   # a changed verdict is a new step, not a repeat
     (challenged / "decisions.md").write_text("# Журнал решений\n\n- Выбранный вариант: 2\n")
     assert any("O002" in e and "risk-accepted" in e
                for e in validate.check_file(challenged, "decisions.md"))
