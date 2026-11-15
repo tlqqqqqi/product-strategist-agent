@@ -1,0 +1,5 @@
+{"type": "step_start", "timestamp": 1794761837000, "sessionID": "ses_fixture", "part": {"type": "step-start", "snapshot": "abc"}}
+{"type": "tool_use", "timestamp": 1794761837400, "sessionID": "ses_fixture", "part": {"type": "tool", "tool": "skill", "callID": "call_1794761837400", "state": {"status": "completed", "input": {"name": "using-strategist"}, "output": "<skill_content name=\"using-strategist\">skill body</skill_content>", "title": "", "metadata": {}, "time": {"start": 1794761837400, "end": 1794761837400}}}}
+{"type": "text", "timestamp": 1794761837500, "sessionID": "ses_fixture", "part": {"type": "text", "text": "I'll start by loading the bootstrap skill.", "time": {"start": 1794761837500, "end": 1794761837500}}}
+{"type": "step_finish", "timestamp": 1794761837600, "sessionID": "ses_fixture", "part": {"type": "step-finish", "reason": "tool-calls", "tokens": {"total": 10422, "input": 8676, "output": 82, "reasoning": 0, "cache": {"write": 0, "read": 1664}}, "cost": 0}}
+{"type": "error", "timestamp": 1794761849000, "sessionID": "ses_fixture", "error": {"name": "UnknownError", "data": {"message": "Expected 'function.name' to be a string."}}}

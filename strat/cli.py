@@ -227,11 +227,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     replay = sub.add_parser("replay", help="replay script")
     rsub = replay.add_subparsers(dest="replay_cmd", required=True)
-    p = _cmd(rsub, "export", "build the replay script from the recorded session")
+    p = _cmd(rsub, "export", "add one recorded run to the replay bundle (or replace it by id)")
     p.add_argument("--transcripts", default=None,
                    help="folder of Claude Code session transcripts (default: this folder's)")
+    p.add_argument("--opencode", default=None,
+                   help="folder of OpenCode `run --format json` turn logs: <n>.jsonl, "
+                        "<n>.prompt.txt, optional times.txt")
     p.add_argument("--out", default=None, help="default: demo/replay/script.json")
+    p.add_argument("--id", dest="run_id", default=None,
+                   help="run id; a run with the same id is replaced (default: from the model)")
     p.add_argument("--label", default=None, help="what run this is, shown on the page banner")
+    p.add_argument("--model", default=None, help="model name (default: from the transcripts)")
     p.set_defaults(target="replay export")
 
     analysis = sub.add_parser("analysis", help="data analysis scripts in analysis/")
