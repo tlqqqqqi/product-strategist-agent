@@ -178,6 +178,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--other", default=None)
     p.add_argument("--answer", default=None,
                    help="record the IDE agent's own answer (stored with by=agent)")
+    p.add_argument("--again", action="store_true",
+                   help="ask the model again even if a verdict is stored")
     p.set_defaults(target="judge")
 
     p = _cmd(sub, "consult", "challenger call (variants|challenge), verdicts, list")

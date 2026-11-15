@@ -175,3 +175,31 @@ def test_claim_check_shows_stored_judgments(strat, case, claim):
     res = r.data["results"][0]
     assert res["supported"] is False and res["by"] == "agent"
     assert res["judgments"][-1]["answer"] == "no"
+
+
+def test_a_stored_verdict_is_returned_without_a_second_paid_call(strat, case, claim, jev, post):
+    replies, calls = post
+    replies["systemone"] = [jev_reply(0.97)]
+    assert strat("judge", "support", "--claim", claim).code == 0
+    r = strat("judge", "support", "--claim", claim, "--json")
+    assert r.code == 0 and r.data["answer"] == "yes" and r.data.get("stored") is True
+    assert len(calls) == 1  # the second ask reuses the verdict
+    assert strat("judge", "support", "--claim", claim, "--again").code == 0
+    assert len(calls) == 2  # --again asks the model anew
+
+
+def test_an_agent_answer_after_an_escalation_is_also_reused(strat, case, claim, jev, post):
+    replies, calls = post
+    replies["systemone"] = [jev_reply(0.6)]
+    assert strat("judge", "support", "--claim", claim).code == 3
+    assert strat("judge", "support", "--claim", claim, "--answer", "yes").code == 0
+    r = strat("judge", "support", "--claim", claim, "--json")
+    assert r.code == 0 and r.data["by"] == "agent" and len(calls) == 1
+
+
+def test_an_escalation_is_not_logged_as_a_finished_step(strat, case, claim, jev, post):
+    replies, _ = post
+    replies["systemone"] = [jev_reply(0.6)]
+    strat("judge", "support", "--claim", claim)
+    rows = [x for x in read_jsonl(case / "log.jsonl") if x["step"] == f"judge.support.{claim}"]
+    assert [x["status"] for x in rows] == ["escalated"]

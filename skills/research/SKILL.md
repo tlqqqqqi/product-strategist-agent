@@ -38,7 +38,9 @@ is used anywhere. Read `knowledge/claims.md` if you have not in this session.
    - after each `fact`: `bin/strat judge support --claim <id>` (a second model checks that
      the quote supports the claim text; well under 0.001 USD). Exit 0 records the verdict; on
      a "no", fix the claim text or the quote. Exit 3 means no model was sure or none is
-     available: read the printed prompt, decide yourself and record it with `--answer`.
+     available: read the printed prompt, decide yourself and record it with `--answer`. Ask
+     once per claim: a stored verdict is returned without a new call (`--again` only after the
+     claim's quote changed).
      Report a model's verdict to the user as an assessment, not a fact;
    - your inference from several claims: `--type conclusion --supports C..,C..`;
    - a figure about a closed past period used as history (a cause, a timeline, a

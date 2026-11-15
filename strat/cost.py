@@ -30,7 +30,7 @@ def by_stage(rows: list[dict]) -> list[dict]:
             order.append(name)
         s = stages[name]
         s["steps"] += 1
-        s["errors"] += row.get("status") != "ok"
+        s["errors"] += row.get("status") == "error"  # escalated and refused are not errors
         s["usd"] += float(row.get("usd") or 0)
         s["tokens_in"] += int(row.get("tokens_in") or 0)
         s["tokens_out"] += int(row.get("tokens_out") or 0)

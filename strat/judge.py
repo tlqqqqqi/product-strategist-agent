@@ -152,8 +152,17 @@ def _store(cdir, claims: list[dict], c: dict, question: str, other: str | None,
     ledger.save(cdir, claims)
 
 
+def _stored(c: dict, question: str, other: str | None) -> dict | None:
+    """The latest settled verdict (not an escalation) on this question for this claim."""
+    for j in reversed((c.get("check") or {}).get("judgments") or []):
+        if j.get("question") == question and j.get("other") == other and not j.get("escalated"):
+            return j
+    return None
+
+
 def judge(question: str, case: str | None = None, claim: str | None = None,
-          other: str | None = None, answer: str | None = None, as_json: bool = False) -> int:
+          other: str | None = None, answer: str | None = None, again: bool = False,
+          as_json: bool = False) -> int:
     """Answer a typed question; exit 3 when no model is available or the answer is unsure."""
     from strat.state import log_action
 
@@ -184,6 +193,15 @@ def judge(question: str, case: str | None = None, claim: str | None = None,
         emit(f"{question} {claim}: {answer} (by agent, stored)", result, as_json)
         return 0
 
+    prior = None if again else _stored(c, question, other)
+    if prior:  # a settled verdict is reused: no second paid call on the same question
+        result = {k: prior.get(k) for k in ("answer", "p", "by", "model")}
+        result["stored"] = True
+        emit(f"{question} {claim}{' vs ' + other if other else ''}: {result['answer']} (by "
+             f"{result['by']}, stored {prior.get('at', '')}; no new call; --again asks anew)",
+             result, as_json)
+        return 0
+
     state = _state(question, c, o, index)
     conf = load_config("routes").get("judge", {})
     tried = []
@@ -201,6 +219,7 @@ def judge(question: str, case: str | None = None, claim: str | None = None,
             reason = result.pop("low")
             _store(cdir, claims, c, question, other, result, escalated=True)
             log_action(cdir, step=step, tool="judge", in_=claim, out="claims.jsonl",
+                       status="escalated",
                        note=f"escalated to the main model: {reason} "
                             f"(answer {result['answer'] or '-'}, {result['model']})")
             return _to_agent(question, claim, state, f"escalated: {reason}", as_json,

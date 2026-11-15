@@ -58,6 +58,12 @@ def transcript_line(ts, model="claude-opus-5-5", cwd=None, **usage):
 def test_ide_usage_is_priced_and_assigned_to_stages(strat, case, tmp_path, monkeypatch):
     from strat.core import root
 
+    # pin the case's creation time: cost counts transcript lines from 15 min before it, and the
+    # real clock would otherwise drop the fixed transcript times below once the day moves on
+    state = json.loads((case / "state.json").read_text())
+    state["created"] = "2026-11-15T10:00:00+03:00"
+    (case / "state.json").write_text(json.dumps(state, ensure_ascii=False))
+
     write_log(case, [
         row("intake.brief", "intake", "2026-11-15T10:00:00+03:00"),
         row("gate1.approve", "gate1", "2026-11-15T10:20:00+03:00", tool="gate"),
