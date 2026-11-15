@@ -231,6 +231,9 @@ def parse(lines: list[str], start: int) -> Block:
     if kind == "bars" and any(v < 0 for v in values) and any(v > 0 for v in values):
         block.errors.append((block.line, "bars values must all have the same sign (all "
                                          "decreases or all increases); use a table"))
+    if kind == "line" and block.rows and len(block.rows) < 4:
+        block.errors.append((block.line, f"line needs at least 4 points (has {len(block.rows)}); "
+                                         "for a before/after use slope"))
     if kind == "slope" and block.columns and len(block.columns) != 2:
         block.errors.append((block.line, "slope columns: write two names, \"columns: до | после\""))
     return block

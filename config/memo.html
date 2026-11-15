@@ -134,6 +134,8 @@ a.v:hover { text-decoration: underline; text-decoration-color: var(--hairline); 
 @keyframes grow { from { transform: scaleX(.02); } }
 
 /* line: marks in SVG, values and labels in HTML */
+.blk-plotwrap { position: relative; }
+.blk-tick { position: absolute; left: 0; transform: translateY(-50%); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .blk-plot { display: block; width: 100%; height: auto; overflow: visible; }
 .blk-plot .grid { stroke: var(--hairline); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .blk-plot .trace { fill: none; stroke: var(--muted); stroke-width: 2; vector-effect: non-scaling-stroke; }

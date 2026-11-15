@@ -50,6 +50,8 @@ title: Платящие по месяцам
 unit: чел.
 - 2026-03: 1 200 [C014]
 - 2026-04: 1 350 [C014]
+- 2026-05: 1 610 [C014]
+- 2026-06: 1 740 [C014]
 ```
 
 ```slope
@@ -74,7 +76,7 @@ title: Каналы
 ```
 ````
 
-`line` points go in order; `slope` rows have two values split by `|`; `table` takes the first
+`line` points go in order, at least 4 (two values are a before/after: use `slope`); `slope` rows have two values split by `|`; `table` takes the first
 pipe row as the header, every other row cites a claim, and its first column is the label.
 
 The page also shows, without anything to write: the title and the "## Решение" section in the

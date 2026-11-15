@@ -207,7 +207,7 @@ BLOCK_CLAIMS = [
      "--text", "Удержание M1 в мае 2026: органика 88,8%, реклама 52,1%, партнёры 61%"],
     # C007
     ["--type", "forecast", "--kind", "market",
-     "--text", "Платящих по месяцам: 1 200, 1 350, 1 610 человек"],
+     "--text", "Платящих по месяцам: 1 200, 1 350, 1 610, 1 740 человек"],
     # C008
     ["--type", "assumption", "--kind", "market",
      "--text", "Конверсия в оплату была 3,4%, после теста 4.1%"],
@@ -235,6 +235,7 @@ unit: чел.
 - 2026-03: 1 200 [C007]
 - 2026-04: 1 350 [C007]
 - 2026-05: 1 610 [C007]
+- 2026-06: 1 740 [C007]
 ```""",
     "slope": """```slope
 title: Конверсия в оплату
@@ -767,3 +768,17 @@ def test_header_shows_the_decision_and_the_metadata(strat, memo_case):
     tags = [e[2] for e in page.with_class("risk-id")]
     assert tags == ["O007"]
     assert "уйти к конкуренту" in risks[0][2]
+
+
+def test_line_needs_four_points_and_labels_its_axis(strat, case):
+    """Owner: a two-point line looked ridiculous and had unlabelled gridlines. A line needs at
+    least 4 points (a before/after is a slope); gridlines carry their values."""
+    from strat import blocks
+    two = "```line\ntitle: Отток\nunit: %\n- июль: 4,3 [C001]\n- октябрь: 6,8 [C001]\n```"
+    errs = [m for blk in blocks.blocks_in(two.splitlines()) for _, m in blk.errors]
+    assert any("at least 4 points" in m and "slope" in m for m in errs), errs
+    four = two.replace("- октябрь", "- август: 4,2 [C001]\n- сентябрь: 6,6 [C001]\n- октябрь")
+    assert not [m for blk in blocks.blocks_in(four.splitlines()) for _, m in blk.errors]
+    from strat import report
+    html = report._line(blocks.blocks_in(four.splitlines())[0], {})
+    assert html.count('class="blk-tick"') >= 3 and ">5%<" in html

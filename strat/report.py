@@ -241,41 +241,63 @@ def _funnel(block: blocks.Block, claims: dict) -> str:
     return f'<div class="blk-rows">{"".join(rows)}</div>'
 
 
+def _ticks(lo: float, hi: float) -> list[float]:
+    """3-6 round gridline values covering lo..hi (steps 1, 2, 2.5 or 5 times a power of ten)."""
+    import math
+    span = (hi - lo) or abs(hi) or 1.0
+    for mag in range(math.floor(math.log10(span)) - 1, math.floor(math.log10(span)) + 2):
+        for m in (1, 2, 2.5, 5):
+            step = m * 10 ** mag
+            first, last = math.floor(lo / step) * step, math.ceil(hi / step) * step
+            n = round((last - first) / step) + 1
+            if 3 <= n <= 6:
+                return [round(first + i * step, 10) for i in range(n)]
+    return [lo, hi]
+
+
+def _tick_label(v: float, unit: str) -> str:
+    text = (f"{v:.10g}").replace(".", ",")
+    return text + ("%" if unit.strip() == "%" else "")
+
+
 def _line(block: blocks.Block, claims: dict) -> str:
-    """Marks only in the SVG: points sit at the centres of the label columns below it, so the
-    HTML values and x labels line up with them at any width."""
-    width, height, upper, lower = 720, 192, 24, 168
+    """Marks only in the SVG; gridline values and the x labels are HTML. Points sit at the centres
+    of the label columns below, which start after the same left gutter as the plot."""
+    width, height, upper, lower, gutter = 720, 192, 12, 180, 56
     vals = [r.values[0] for r in block.rows]
-    lo, hi = min(vals), max(vals)
+    ticks = _ticks(min(vals), max(vals))
+    lo, hi = ticks[0], ticks[-1]
     n = len(vals)
     focal = _focal(block, None)
     focal = n - 1 if focal is None else focal
 
     def x(i: int) -> int:
-        return g4(width * (i + 0.5) / n)
+        return g4(gutter + (width - gutter) * (i + 0.5) / n)
 
     def y(v: float) -> int:
         return g4((upper + lower) / 2 if hi == lo else lower - (v - lo) / (hi - lo) * (lower - upper))
 
     pts = [(x(i), y(v)) for i, v in enumerate(vals)]
-    grid = "".join(f'<line class="grid" x1="0" x2="{width}" y1="{g}" y2="{g}"/>'
-                   for g in (upper, (upper + lower) // 2, lower))
+    grid = "".join(f'<line class="grid" x1="{gutter}" x2="{width}" y1="{y(t)}" y2="{y(t)}"/>'
+                   for t in ticks)
+    tick_html = "".join(f'<span class="blk-tick" style="top:{y(t) / height * 100:.2f}%">'
+                        f'{esc(_tick_label(t, block.unit or ""))}</span>' for t in ticks)
     trace = " ".join(f"{a},{b}" for a, b in pts)
     seg = (f'<polyline class="seg" points="{pts[focal - 1][0]},{pts[focal - 1][1]} '
            f'{pts[focal][0]},{pts[focal][1]}"/>' if focal > 0 else "")
     dots = "".join(f'<circle class="pt{" f" if i == focal else ""}" cx="{a}" cy="{b}" r="4"/>'
                    for i, (a, b) in enumerate(pts))
     label = ", ".join(f"{r.label}: {_shown(r.shown[0])}" for r in block.rows)
-    svg = (f'<svg class="blk-plot" viewBox="0 0 {width} {height}" width="100%" '
-           f'preserveAspectRatio="xMidYMid meet" role="img" '
+    svg = (f'<div class="blk-plotwrap"><svg class="blk-plot" viewBox="0 0 {width} {height}" '
+           f'width="100%" preserveAspectRatio="xMidYMid meet" role="img" '
            f'aria-label="{esc(block.title)}: {esc(label)}">'
-           f'{grid}<polyline class="trace" points="{trace}"/>{seg}{dots}</svg>')
+           f'{grid}<polyline class="trace" points="{trace}"/>{seg}{dots}</svg>{tick_html}</div>')
     labels = "".join(
         f'<li class="blk-pt{" focal" if i == focal else ""}"{types_of(r.ids, claims)}>'
         f'{_value(r, 0, _row_unit(block, r), "b")}'
         f'<span class="blk-l">{esc(r.label)}</span></li>' for i, r in enumerate(block.rows))
-    return (svg + f'<ol class="blk-points" style="grid-template-columns:repeat({n},minmax(0,1fr))">'
-            f"{labels}</ol>")
+    return (svg + f'<ol class="blk-points" style="padding-left:{gutter / width * 100:.3f}%;'
+            f'grid-template-columns:repeat({n},minmax(0,1fr))">{labels}</ol>')
 
 
 def _tiles(block: blocks.Block, claims: dict) -> str:
