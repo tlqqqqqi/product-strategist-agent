@@ -43,15 +43,44 @@ def context() -> str:
     )
 
 
-def main() -> None:
-    text = context()
+# Output key per environment. Claude Code, Qwen Code (and its fork GigaCode) and Gemini CLI read
+# hookSpecificOutput.additionalContext; Cursor reads additional_context; Copilot CLI reads a
+# top-level additionalContext. Emit exactly one key: Claude Code reads two without dedup.
+NESTED = ("claude", "qwen", "gigacode", "gemini")
+
+
+def detect() -> str:
     if os.environ.get("CURSOR_PLUGIN_ROOT") or os.environ.get("CURSOR_PROJECT_DIR"):
-        print(json.dumps({"additional_context": text}, ensure_ascii=False))
-    elif os.environ.get("CLAUDE_PROJECT_DIR"):
-        print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart",
-                                                 "additionalContext": text}}, ensure_ascii=False))
+        return "cursor"
+    if os.environ.get("COPILOT_CLI"):
+        return "copilot"
+    if os.environ.get("CLAUDE_PROJECT_DIR"):
+        return "claude"
+    return "text"
+
+
+def requested_format(argv) -> str:
+    """`--format <env>` from the adapter's hook config wins; otherwise detect by env vars."""
+    if "--format" in argv:
+        i = argv.index("--format")
+        if i + 1 < len(argv):
+            return argv[i + 1]
+    return os.environ.get("STRAT_HOOK_FORMAT") or detect()
+
+
+def main(argv=None) -> None:
+    fmt = requested_format(sys.argv[1:] if argv is None else argv)
+    text = context()
+    if fmt == "cursor":
+        out = {"additional_context": text}
+    elif fmt == "copilot":
+        out = {"additionalContext": text}
+    elif fmt in NESTED:
+        out = {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": text}}
     else:
         print(text)
+        return
+    print(json.dumps(out, ensure_ascii=False))
 
 
 if __name__ == "__main__":
