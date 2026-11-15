@@ -203,3 +203,19 @@ def test_an_escalation_is_not_logged_as_a_finished_step(strat, case, claim, jev,
     strat("judge", "support", "--claim", claim)
     rows = [x for x in read_jsonl(case / "log.jsonl") if x["step"] == f"judge.support.{claim}"]
     assert [x["status"] for x in rows] == ["escalated"]
+
+
+def test_the_agent_cannot_overrule_a_models_settled_no(strat, case, claim, jev, post):
+    """Qwen and omp on DeepSeek answered `--answer yes` right after Jev said "no" with high
+    confidence, and the gate took it. A settled model "no" stands: fix the claim and judge again."""
+    replies, _ = post
+    replies["systemone"] = [jev_reply(0.07)]
+    assert strat("judge", "support", "--claim", claim).code == 0
+    r = strat("judge", "support", "--claim", claim, "--answer", "yes")
+    assert r.code == 1 and "jev" in r.err and "claim replace" in r.err
+    assert stored(case)["supported"] is False
+
+
+def test_the_agent_may_answer_after_an_escalation_or_without_models(strat, case, claim, post):
+    # no keys at all: the agent's own answer is the only one there is
+    assert strat("judge", "support", "--claim", claim, "--answer", "yes").code == 0

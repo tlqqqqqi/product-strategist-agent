@@ -23,7 +23,7 @@ import json
 import re
 
 from strat import ledger, models, net
-from strat.core import USER_DECIDES, StratError, case_path, emit, load_config, now, warn
+from strat.core import FAILED, USER_DECIDES, StratError, case_path, emit, load_config, now, warn
 
 QUESTIONS = ("type", "support", "contradiction", "sufficient")
 YES_NO = ("yes", "no")
@@ -186,6 +186,13 @@ def judge(question: str, case: str | None = None, claim: str | None = None,
         answer = answer.strip().lower()
         if answer not in _labels(question):
             raise StratError(f"--answer must be one of: {', '.join(_labels(question))}")
+        prior = _stored(c, question, other)
+        if prior and prior.get("by") in ("jev", "peer") and prior.get("answer") != answer:
+            raise StratError(
+                f"{claim}: {prior['by']} ({prior.get('model')}) already answered "
+                f"{prior['answer']!r} with no escalation; the agent cannot overrule a model's "
+                "settled verdict. Fix the claim instead: `bin/strat claim replace` with a text the "
+                "quote supports (or a better quote), then judge the new claim", FAILED)
         result = {"answer": answer, "p": None, "by": "agent", "model": None}
         _store(cdir, claims, c, question, other, result)
         log_action(cdir, step=step, tool="judge", in_=claim, out="claims.jsonl",

@@ -37,8 +37,11 @@ is used anywhere. Read `knowledge/claims.md` if you have not in this session.
      `bin/strat source add`, checked with `bin/strat analysis check <S id>`, then quoted;
    - after each `fact`: `bin/strat judge support --claim <id>` (a second model checks that
      the quote supports the claim text; well under 0.001 USD). Exit 0 records the verdict; on
-     a "no", fix the claim text or the quote. Exit 3 means no model was sure or none is
-     available: read the printed prompt, decide yourself and record it with `--answer`. Ask
+     a "no", the claim is wrong as written: `bin/strat claim replace` it with a text the quote
+     supports (or a better quote), then judge the new claim. You cannot overrule a model's
+     "no" with `--answer` (the CLI refuses), and Gates 2 and 3 refuse a fact without a "yes".
+     Exit 3 means no model was sure or none is available: read the printed prompt, decide
+     yourself and record it with `--answer`. Ask
      once per claim: a stored verdict is returned without a new call (`--again` only after the
      claim's quote changed).
      Report a model's verdict to the user as an assessment, not a fact;
