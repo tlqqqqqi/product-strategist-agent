@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "name": "strategist-bootstrap",
+            "type": "command",
+            "command": "\"$GEMINI_PROJECT_DIR\"/hooks/session-start --format gemini"
+          }
+        ]
+      }
+    ]
+  }
+}

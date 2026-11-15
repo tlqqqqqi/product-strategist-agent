@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "name": "strategist-bootstrap",
+            "command": "\"${GIGACODE_PROJECT_DIR:-${QWEN_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-.}}}\"/hooks/session-start --format gigacode",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
