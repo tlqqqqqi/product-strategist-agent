@@ -59,7 +59,7 @@ bin/strat capture <url> --flow <name> --steps 3 --step research.q<N>.capture.<k>
 - A flow name is used once: shots are evidence and are never overwritten. A new attempt takes a
   new `--flow` name.
 - Exit 2 with "Playwright is not installed": tell the user in Russian that the browser is an
-  optional install (`bin/strat setup --browser`), and offer the alternatives: they install it,
+  optional install (the command is in the exit message and in README, section «Ключи»), and offer the alternatives: they install it,
   they send screenshots of the pages (register them with `bin/strat source add`), or you use
   `bin/strat read <url>` for the page text only.
 - Exit 1 "refused step N": the shots before it are kept and registered. Tell the user which

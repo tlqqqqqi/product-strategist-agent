@@ -27,7 +27,7 @@ def test_without_playwright_exits_2_and_names_setup(strat, case, monkeypatch):
     monkeypatch.setitem(sys.modules, "playwright.sync_api", None)
     r = strat("capture", "https://example.org/tariffs", "--flow", "tariffs")
     assert r.code == 2
-    assert "strat setup --browser" in r.err
+    assert "playwright install chromium-headless-shell" in r.err
     assert not (case / "shots").exists()
 
 
