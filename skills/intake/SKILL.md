@@ -1,6 +1,6 @@
 ---
 name: intake
-description: Use when a product lead brings a decision question and there is no active case, or the case is at stage intake. Turns a vague request plus materials into a brief, asking at most 5 questions (quick) or 10 (deep).
+description: Use when a product lead brings a decision question and there is no active case, or the case is at stage intake. Turns a vague request plus materials into a brief, asking at most 5 questions (quick) or 10 (deep), one question per window.
 ---
 
 # Intake
@@ -28,32 +28,39 @@ bin/strat source add <path> --step intake.source.<n>       # once per file
   `skills/materials/SKILL.md` for tables, documents, slides and PDFs.
 - Classify the case with `knowledge/case-types.md`.
 
-## 3. Ask (one message, then stop and wait)
+## 3. Ask, one question at a time
 
-Quick mode (default): one message in Russian with at most 5 numbered questions. Each question:
+Pick the questions first. Quick mode (default): at most 5. Deep mode (when the user asks for it,
+or when more than 5 are unknown): at most 10. Each question:
 
 - is about something the materials do not answer and that changes the options or the plan
   (the decision itself, the goal metric, the recipient, the deadline, hard constraints);
-- carries a default: "если не ответите, считаю, что ...".
+- carries a default: "если не ответите, считаю, что ...";
+- has 2-3 short answer options, the default first, plus a free answer.
 
-Deep mode: when the user asks for it, or when more than 5 of these are unknown. One question per
-message, at most 10 in total, each with a default.
+Do not ask what you can read in the materials. Do not ask about method. "Не знаю" means the
+default.
 
-Do not ask what you can read in the materials. Do not ask about method. Free-text answers are
-fine; "не знаю" means the default.
-
-Before you send the questions, record them so a new chat can pick up the answers:
+Record them first, so a new chat can pick up the answers:
 
 ```
 bin/strat step intake.questions --next "Waiting for answers to intake questions: 1) <short> 2) <short> ... Defaults: <short>"
 ```
 
-Then send the questions and **end your turn**. Do not fill in the defaults yourself and go on:
-the CLI refuses to move to the plan until the answers are logged. In the next turn, after the
-user replied (or said to take the defaults), log what they said first:
+Then ask **one question per window**, in Russian, in order:
+
+- **Your harness has a question tool** (Claude Code: `AskUserQuestion`; another harness: a tool
+  for asking the user, if one is listed): one call per question, with one question in it, the
+  options as choices with the default marked "(по умолчанию)", the free answer left to the tool's
+  own "other" field. Wait for each answer before the next call.
+- **No question tool:** one question per message, options numbered, the default marked, "или
+  напишите свой ответ". Send it and **end your turn**; the next question goes after the answer.
+
+Do not fill in the defaults yourself and go on: the CLI refuses to move to the plan until the
+answers are logged. After the last answer (or "по умолчанию" for the rest), log every pair:
 
 ```
-bin/strat step intake.answers --note "<the user's answers in a few words, or: defaults>"
+bin/strat step intake.answers --note "**Q**: <question 1> **A**: <answer 1> **Q**: <question 2> **A**: <answer 2> ..."
 ```
 
 ## 4. Write the brief

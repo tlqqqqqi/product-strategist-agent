@@ -60,3 +60,12 @@ def test_links_between_files_resolve():
     for f in all_text_files():
         for ref in re.findall(r"`((?:skills|knowledge)/[\w./-]+\.md)`", f.read_text()):
             assert (REPO / ref).is_file(), f"{f.relative_to(REPO)} -> {ref}"
+
+
+def test_intake_asks_one_question_per_window():
+    """The owner wants intake questions one at a time in the harness's question window (Claude
+    Code AskUserQuestion), answers kept as **Q**/**A**; never a numbered list in one message."""
+    text = (REPO / "skills" / "intake" / "SKILL.md").read_text()
+    assert "AskUserQuestion" in text and "**Q**" in text and "**A**" in text
+    assert "one question per" in text
+    assert "numbered questions" not in text
