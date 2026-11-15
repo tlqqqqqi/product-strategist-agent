@@ -91,6 +91,7 @@ WHERE_FORMS = {
     "shot": "an element name from the screenshot's box JSON (its `targets`)",
     "transcript": "a moment HH:MM:SS inside a segment (or its start), or a range "
                   "HH:MM:SS-HH:MM:SS",
+    "persona": "Q<n>: one question-and-answer block of a model respondent's session",
 }
 
 
@@ -146,6 +147,11 @@ def locate(text: str, fmt: str, where: str | None) -> tuple[str, bool]:
             raise _bad_where(fmt, where, f"no segment at that time (the transcript covers "
                                          f"{span})")
         return region, True
+    if fmt == "persona":
+        blocks = _blocks(text, re.compile(r"^## (Q\d+)\s*$"))
+        if where.upper() not in blocks:
+            raise _bad_where(fmt, where, f"no block {where!r} (blocks: {', '.join(blocks)})")
+        return blocks[where.upper()], True
     if fmt in ("xlsx", "xlsm", "csv"):
         m = CELL_RANGE.match(where)
         if not m:
@@ -280,6 +286,16 @@ def add(path: str, case: str | None = None, title: str | None = None, step: str 
         src = cdir / path if (cdir / path).exists() else Path.cwd() / path
     if not src.is_file():
         raise StratError(f"{path}: file not found")
+    from strat import interview
+
+    if interview.looks_like_transcript(src.resolve()):
+        # An interview transcript: masked copy in interviews/, the raw file stays out of the case.
+        if src.name.lower().startswith("persona_"):
+            raise StratError(f"{src.name} looks like a model respondent's session: import it with "
+                             "`strat interview add <file> --persona NAME` so it stays synthetic")
+        entry = interview.register_transcript(cdir, src.resolve(), title=title, names=[],
+                                              persona=None, step=step, tool="source add")
+        return interview._report(entry, as_json)
     src = into_materials(cdir, src)
     text = conv.convert(str(src))
     origin = str(src.relative_to(cdir.resolve()))
