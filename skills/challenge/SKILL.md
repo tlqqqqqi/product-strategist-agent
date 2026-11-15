@@ -45,6 +45,8 @@ bin/strat consult verdict O003 open --reason "Решат данные о ког�
 ```
 
 - `accepted`: the option changes, merges or drops. Change `options.md` and `table.md` to match.
+  If you agree with it but nothing in the documents changes (the problem stays), it is `open`,
+  not `accepted`: "accepted, still open" hides it from the gate.
 - `rejected`: the reason must cite the claim that answers the objection; the command refuses a
   rejection without an existing claim id.
 - `open`: you cannot answer it with a claim. It is shown to the user at the gate.

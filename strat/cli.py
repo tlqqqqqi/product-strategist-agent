@@ -8,6 +8,7 @@ standard library. Exit codes: 0 ok, 1 validation failed, 2 tool or capability un
 from __future__ import annotations
 
 import argparse
+import contextlib
 import importlib
 import sys
 
@@ -23,6 +24,7 @@ COMMANDS: dict[str, str] = {
     "gate check": "validate:gate_check",
     "gate approve": "state:gate_approve",
     "source add": "sources:add",
+    "source list": "sources:list_sources",
     "claim add": "ledger:add",
     "claim check": "ledger:check",
     "claim list": "ledger:list_claims",
@@ -103,6 +105,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--title", default=None)
     p.add_argument("--step", default=None)
     p.set_defaults(target="source add")
+    p = _cmd(ssub, "list", "every source: id, kind, title, origin, flags")
+    p.set_defaults(target="source list")
 
     claim = sub.add_parser("claim", help="claim ledger")
     csub = claim.add_subparsers(dest="claim_cmd", required=True)
@@ -267,11 +271,41 @@ def resolve(target: str):
     return getattr(module, func_name)
 
 
+# Read-only commands skip the lock, so the session-start hook never waits for a long call.
+NO_LOCK = {"state", "cost", "doctor"}
+
+
+@contextlib.contextmanager
+def _case_lock(target: str):
+    """One CLI call at a time per cases folder: agents in some harnesses run tool calls in
+    parallel, and claims.jsonl, sources/index.jsonl and log.jsonl are read-modify-write files.
+    Parallel calls wait for each other instead of losing writes or sharing an id."""
+    try:
+        import fcntl
+    except ImportError:  # Windows: no lock (not supported there anyway)
+        yield
+        return
+    if target in NO_LOCK:
+        yield
+        return
+    from strat.core import cases_dir
+
+    folder = cases_dir()
+    folder.mkdir(parents=True, exist_ok=True)
+    with open(folder / ".lock", "a") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle, fcntl.LOCK_UN)
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     kwargs = {k: v for k, v in vars(args).items() if k not in _INTERNAL}
     try:
-        return int(resolve(args.target)(**kwargs) or 0)
+        with _case_lock(args.target):
+            return int(resolve(args.target)(**kwargs) or 0)
     except NotImplementedError:
         print(f"strat: `{args.target}` is not available in this version", file=sys.stderr)
         return UNAVAILABLE

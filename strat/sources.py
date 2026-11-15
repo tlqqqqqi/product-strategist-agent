@@ -312,3 +312,14 @@ def add(path: str, case: str | None = None, title: str | None = None, step: str 
          {"id": entry["id"], "snapshot": entry["snapshot"], "origin": origin,
           "existing": bool(entry.get("existing")), "flags": flags}, as_json)
     return 0
+
+
+def list_sources(case: str | None = None, as_json: bool = False) -> int:
+    """Print every registered source: id, kind, title, origin and flags."""
+    entries = index(case_path(case))
+    rows = [{k: e.get(k) for k in ("id", "kind", "title", "origin", "snapshot")}
+            | {"flags": e.get("flags", [])} for e in entries]
+    lines = [f"{r['id']}  {r['kind']:9} {r['origin']}  {r['title']}"
+             + (f"  [flags: {', '.join(r['flags'])}]" if r["flags"] else "") for r in rows]
+    emit("\n".join(lines) or "no sources yet", rows, as_json)
+    return 0

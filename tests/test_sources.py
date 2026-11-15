@@ -92,3 +92,14 @@ def test_shot_quote_is_checked_inside_the_named_element(strat, case):
     assert other.code == 1
     missing = strat(*base, "--text", "x 249", "--where", "header", "--quote", "249")
     assert missing.code == 1 and "family_price" in missing.err
+
+
+def test_source_list_shows_every_source_with_its_flags(strat, case):
+    assert strat("source", "add", "materials/metrics.xlsx").code == 0
+    assert strat("source", "add", "materials/competitor.html").code == 0
+    r = strat("source", "list", "--json")
+    assert r.code == 0
+    assert [s["id"] for s in r.data] == ["S001", "S002"]
+    assert r.data[1]["flags"] == ["instructions_to_ai"]
+    text = strat("source", "list").out
+    assert "S001" in text and "metrics.xlsx" in text and "S002" in text

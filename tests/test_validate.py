@@ -184,8 +184,22 @@ def test_uncited_criteria_bullet_in_table_fails(strat, ready):
 def test_cited_table_passes_gate2_after_gate1(strat, ready):
     assert strat("gate", "check", "1").code == 0
     assert strat("gate", "approve", "1").code == 0
+    assert strat("judge", "support", "--claim", "C001", "--answer", "yes").code == 0
     r = strat("gate", "check", "2")
     assert r.code == 0, r.err
+
+
+def test_gate2_needs_a_support_verdict_on_every_fact(strat, ready):
+    """A weak model forgets `judge support` (Pi on DeepSeek checked 0 of 16 facts), so the gate
+    enforces it: every active fact carries a settled support verdict, by a model or the agent."""
+    assert strat("gate", "check", "1").code == 0  # gate 1 does not ask for it yet
+    assert strat("gate", "approve", "1").code == 0
+    r = strat("gate", "check", "2")
+    assert r.code == 1 and "C001" in r.err and "judge support" in r.err
+    assert "C002" not in r.err  # an assumption needs no verdict
+    assert strat("judge", "support", "--claim", "C001", "--answer", "no").code == 0
+    r = strat("gate", "check", "2")
+    assert r.code == 1 and "C001" in r.err and "not supported" in r.err
 
 
 def test_step_out_checks_table_citations(strat, ready):

@@ -16,6 +16,7 @@ SAMPLES = {
     "gate check": ["gate", "check", "1"],
     "gate approve": ["gate", "approve", "1"],
     "source add": ["source", "add", "f.xlsx", "--step", "s"],
+    "source list": ["source", "list"],
     "claim add": ["claim", "add", "--type", "fact", "--kind", "price", "--text", "t",
                   "--source", "S001", "--where", "w", "--quote", "q", "--as-of", "2026-10",
                   "--supports", "C001", "--historical"],

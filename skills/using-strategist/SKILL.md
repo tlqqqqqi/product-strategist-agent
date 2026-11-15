@@ -77,6 +77,10 @@ Read the skill file before you act on a stage. Method knowledge is in `knowledge
     `bin/strat ...`, one command per call, never after `cd cases/...` and never chained with
     `&&` or loops: paths into the case are `cases/<id>/...`. The IDE allows `bin/strat` without a
     prompt only in that form.
+11. **No installs, no system Python.** Run scripts only with `.venv/bin/python`, which has
+    everything the skills need (tables, Word, PowerPoint, PDF). Never run `pip install`, `npm
+    install` or the system `python3`: they change the user's machine. If something is missing,
+    say what and stop.
 
 ## Commands you will use most
 

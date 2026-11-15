@@ -48,6 +48,14 @@ Before you send the questions, record them so a new chat can pick up the answers
 bin/strat step intake.questions --next "Waiting for answers to intake questions: 1) <short> 2) <short> ... Defaults: <short>"
 ```
 
+Then send the questions and **end your turn**. Do not fill in the defaults yourself and go on:
+the CLI refuses to move to the plan until the answers are logged. In the next turn, after the
+user replied (or said to take the defaults), log what they said first:
+
+```
+bin/strat step intake.answers --note "<the user's answers in a few words, or: defaults>"
+```
+
 ## 4. Write the brief
 
 - Copy `knowledge/templates/brief.md` to `cases/<id>/brief.md` and fill every section in

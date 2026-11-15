@@ -160,6 +160,25 @@ def fact_errors(cdir: Path, claims: list[dict]) -> list[str]:
     return errors
 
 
+def verdict_errors(claims: list[dict]) -> list[str]:
+    """Gates 2 and 3: every active fact carries a settled support verdict (a model's or the
+    agent's own), and the latest one says yes."""
+    errors = []
+    for c in claims:
+        if c["type"] != "fact" or c["status"] in ("withdrawn", "replaced"):
+            continue
+        settled = [j for j in (c.get("check") or {}).get("judgments") or []
+                   if j.get("question") == "support" and not j.get("escalated")]
+        if not settled:
+            errors.append(f"claims.jsonl: {c['id']}: no support verdict; run "
+                          f"`bin/strat judge support --claim {c['id']}`")
+        elif settled[-1].get("answer") != "yes":
+            errors.append(f"claims.jsonl: {c['id']}: the quote does not support the claim "
+                          f"(not supported, by {settled[-1].get('by')}); fix the claim or "
+                          "replace it, then judge it again")
+    return errors
+
+
 def objection_errors(cdir: Path) -> list[str]:
     return [f"objections.jsonl: {o.get('id', '?')} has no verdict"
             for o in read_jsonl(cdir / "objections.jsonl") if not o.get("verdict")]
@@ -190,6 +209,8 @@ def gate_errors(cdir: Path, n: int) -> list[str]:
         if f in CHECKED:
             errors += citation_errors(cdir, f, index, life)
     errors += fact_errors(cdir, claims)
+    if n >= 2:
+        errors += verdict_errors(claims)
     errors += objection_errors(cdir)
     return errors
 

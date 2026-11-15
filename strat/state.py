@@ -184,6 +184,8 @@ def step(step_id: str, case: str | None = None, stage: str | None = None, out: s
     state = load(cdir)
     if stage is not None:
         _check_stage_move(state, stage)
+        if stage == "plan":
+            _check_intake_answered(cdir)
     if out is not None:
         target = (cdir / out).resolve()
         if cdir.resolve() not in target.parents or not target.is_file():
@@ -224,6 +226,18 @@ def gate_approve(n: int, case: str | None = None, as_json: bool = False) -> int:
 
 
 # --- rules ------------------------------------------------------------------------------------
+
+def _check_intake_answered(cdir: Path) -> None:
+    """Questions asked at intake must be answered by the user before the plan starts."""
+    rows = [r for r in read_jsonl(cdir / "log.jsonl") if r.get("status") == "ok"]
+    asked = [i for i, r in enumerate(rows) if r["step"].startswith("intake.questions")]
+    answered = [i for i, r in enumerate(rows) if r["step"].startswith("intake.answers")]
+    if asked and not any(a > asked[-1] for a in answered):
+        raise StratError("the intake questions are not answered yet: stop and wait for the "
+                         "user's reply. When the user answers (or says to take the defaults), "
+                         "log `bin/strat step intake.answers --note \"<what the user said>\"` "
+                         "and then move to the plan")
+
 
 def _check_stage_move(state: dict, stage: str) -> None:
     if stage not in STAGES:

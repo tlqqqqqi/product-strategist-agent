@@ -91,6 +91,9 @@ def test_ide_usage_of_a_later_case_is_not_counted(strat, case, cases, tmp_path, 
     from strat.core import root
 
     write_log(case, [row("intake.brief", "intake", "2026-11-15T10:00:00+03:00")])
+    mine = json.loads((case / "state.json").read_text())
+    mine["created"] = "2026-11-15T10:00:00+03:00"  # pinned, see the test above
+    (case / "state.json").write_text(json.dumps(mine, ensure_ascii=False))
     other = json.loads((case / "state.json").read_text())
     other["created"] = "2026-11-15T11:00:00+03:00"
     (cases / "later").mkdir()

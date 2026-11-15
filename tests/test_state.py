@@ -2,6 +2,8 @@
 
 import json
 
+from conftest import REPO
+
 from strat.core import read_jsonl
 
 
@@ -117,3 +119,20 @@ def test_step_id_reused_by_another_command_is_refused(strat, case):
     r = strat("claim", "add", "--type", "gap", "--kind", "market", "--text", "x",
               "--step", "research.q1.1")
     assert r.code == 1 and "already used by `source add`" in r.err
+
+
+def test_plan_waits_for_the_answers_to_the_intake_questions(strat, case):
+    """Kimi on DeepSeek asked its questions, then filled in the defaults itself and ran on to
+    Gate 1 in the same turn. Once questions are logged, the plan stage needs the answers first."""
+    (case / "brief.md").write_text((REPO / "knowledge" / "templates" / "brief.md").read_text())
+    assert strat("step", "intake.questions", "--next", "Waiting for answers").code == 0
+    r = strat("step", "intake.brief", "--out", "brief.md", "--stage", "plan")
+    assert r.code == 1 and "intake.answers" in r.err and "wait" in r.err.lower()
+    assert strat("state", "--json").data["stage"] == "intake"
+    assert strat("step", "intake.answers", "--note", "по умолчанию").code == 0
+    assert strat("step", "intake.brief", "--out", "brief.md", "--stage", "plan").code == 0
+
+
+def test_plan_without_intake_questions_needs_no_answers(strat, case):
+    (case / "brief.md").write_text((REPO / "knowledge" / "templates" / "brief.md").read_text())
+    assert strat("step", "intake.brief", "--out", "brief.md", "--stage", "plan").code == 0
