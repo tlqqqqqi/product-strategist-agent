@@ -74,6 +74,12 @@ def test_plan_may_scroll_and_goto_must_be_a_string(tmp_path):
     bad.write_text(json.dumps({"steps": [{"name": "a", "goto": 123}]}))
     with pytest.raises(browser.StratError, match="http"):
         browser.load_plan(str(bad))
+    for combo in ({"click": "a.next", "scroll": True}, {"goto": "https://example.org/b",
+                                                       "scroll": True}):
+        two = tmp_path / "two.json"
+        two.write_text(json.dumps({"steps": [{"name": "a", **combo}]}))
+        with pytest.raises(browser.StratError, match="one action"):
+            browser.load_plan(str(two))
     notbool = tmp_path / "nb.json"
     notbool.write_text(json.dumps({"steps": [{"name": "a", "scroll": "yes"}]}))
     with pytest.raises(browser.StratError, match="scroll"):

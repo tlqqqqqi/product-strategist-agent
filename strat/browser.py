@@ -153,8 +153,9 @@ def load_plan(path: str | None) -> list[dict] | None:
         if not NAME.match(str(name)) or name in seen:
             raise StratError(f"{path}: step {i} needs a unique name of a-z, 0-9, '_' or '-'")
         seen.add(name)
-        if "click" in step and "goto" in step:
-            raise StratError(f"{path}: step {i} has both click and goto; split it")
+        if len({"click", "goto", "scroll"} & set(step)) > 1:
+            raise StratError(f"{path}: step {i} has more than one action (click, goto, scroll); "
+                             "a step does one action, split it")
         if "goto" in step:
             if not isinstance(step["goto"], str):
                 raise StratError(f"{path}: step {i} goto must be an http(s) URL string")
