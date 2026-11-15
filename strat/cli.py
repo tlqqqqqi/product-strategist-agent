@@ -219,7 +219,10 @@ def build_parser() -> argparse.ArgumentParser:
     replay = sub.add_parser("replay", help="replay script")
     rsub = replay.add_subparsers(dest="replay_cmd", required=True)
     p = _cmd(rsub, "export", "build the replay script from the recorded session")
-    p.add_argument("--transcript", default=None)
+    p.add_argument("--transcripts", default=None,
+                   help="folder of Claude Code session transcripts (default: this folder's)")
+    p.add_argument("--out", default=None, help="default: demo/replay/script.json")
+    p.add_argument("--label", default=None, help="what run this is, shown on the page banner")
     p.set_defaults(target="replay export")
 
     analysis = sub.add_parser("analysis", help="data analysis scripts in analysis/")
