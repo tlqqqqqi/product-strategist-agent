@@ -238,6 +238,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="run id; a run with the same id is replaced (default: from the model)")
     p.add_argument("--label", default=None, help="what run this is, shown on the page banner")
     p.add_argument("--model", default=None, help="model name (default: from the transcripts)")
+    p.add_argument("--case-dir", dest="case_dir", default=None,
+                   help="the run's case folder, for its claims and sources (default: "
+                        "cases/<case> under the run folder)")
     p.set_defaults(target="replay export")
 
     analysis = sub.add_parser("analysis", help="data analysis scripts in analysis/")

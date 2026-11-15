@@ -15,6 +15,8 @@ with the same id. A version 1 script (one run) is still read and wrapped as one 
 
 from __future__ import annotations
 
+import getpass
+import hashlib
 import json
 import re
 import os
@@ -41,8 +43,10 @@ SECRET_PATTERNS = [
     re.compile(r"(?i)\b(\w*(?:key|token|secret|password)\w*)(\s*[=:]\s*)"
                r"(?!\[скрыто\])(['\"]?)[^\s'\"]{6,}\3"),
     # long mixed letter-digit strings: tokens and keys without a known prefix
-    re.compile(r"(?<![\w-])(?![a-z0-9]+(?:-[a-z0-9]+){3,}(?![\w-]))(?=[A-Za-z0-9_-]*\d)(?=[A-Za-z0-9_-]*[A-Za-z])[A-Za-z0-9_-]{40,}"
-               r"(?![\w-])"),
+    # (lowercase kebab-case slugs and snake_case names of short words are kept)
+    re.compile(r"(?<![\w-])(?![a-z0-9]+(?:-[a-z0-9]+){3,}(?![\w-]))"
+               r"(?![a-z0-9]{1,12}(?:_[a-z0-9]{1,12}){3,}(?![\w-]))"
+               r"(?=[A-Za-z0-9_-]*\d)(?=[A-Za-z0-9_-]*[A-Za-z])[A-Za-z0-9_-]{40,}(?![\w-])"),
 ]
 ABS_PATH = re.compile(r"(?<![\w.:/~-])(?!/dev/null\b)(?:~|/[A-Za-z0-9._-]+)(?:/[A-Za-z0-9._@-]+)+/?")
 TAG_BLOCK = re.compile(r"<([a-z][a-z0-9_-]*)>.*?</\1>", re.S)
@@ -50,7 +54,26 @@ ANSWER = re.compile(r'"((?:[^"\\]|\\.)*)"="((?:[^"\\]|\\.)*)"')
 GATE_CMD = re.compile(r"strat gate (check|approve) (\d+)")
 
 
+def _local_users() -> list[str]:
+    """The login name of whoever runs the export (shows up in `ls -l` output and the like)."""
+    names = set()
+    try:
+        names.add(getpass.getuser())
+    except Exception:  # no login name in this environment
+        pass
+    return [n for n in names if len(n) >= 3 and n not in ("root", "user", "runner")]
+
+
+def _user_pattern() -> re.Pattern | None:
+    names = _local_users()
+    return re.compile(r"(?<![\w.-])(?:" + "|".join(map(re.escape, names)) + r")(?![\w-])") \
+        if names else None
+
+
 def _hide_secrets(text: str) -> str:
+    users = _user_pattern()
+    if users:
+        text = users.sub(HIDDEN, text)
     for pat in SECRET_PATTERNS:
         if pat.groups >= 2:
             text = pat.sub(lambda m: f"{m.group(1)}{m.group(2)}{HIDDEN}", text)
@@ -70,10 +93,12 @@ def redact(text: str, cwd: str | None = None) -> str:
 def leaked(script: dict) -> list[str]:
     """Strings in the script that still match a secret pattern."""
     found: list[str] = []
+    users = _user_pattern()
+    patterns = SECRET_PATTERNS + ([users] if users else [])
 
     def walk(v):
         if isinstance(v, str):
-            found.extend(m.group(0) for p in SECRET_PATTERNS for m in p.finditer(v))
+            found.extend(m.group(0) for p in patterns for m in p.finditer(v))
         elif isinstance(v, dict):
             for x in v.values():
                 walk(x)
@@ -410,7 +435,7 @@ class Recorder:
             "priced": prices_known,
         }
         return {"case": self.case(), "meta": meta, "materials": materials(text, cwd),
-                "events": group_steps(events)}
+                "events": group_steps(events), "_cwd": cwd}
 
 
 def _run(rec_run: dict, run_id: str | None, label: str | None, model: str, harness: str,
@@ -420,7 +445,8 @@ def _run(rec_run: dict, run_id: str | None, label: str | None, model: str, harne
         meta["tokens"] = tokens
     return {"id": run_id or _slug(model or harness), "label": label or "Запись реального прогона",
             "model": model, "harness": harness, "case": case or rec_run["case"], "meta": meta,
-            "materials": rec_run["materials"], "events": rec_run["events"]}
+            "materials": rec_run["materials"], "events": rec_run["events"],
+            "_cwd": rec_run.get("_cwd")}
 
 
 def _slug(s: str) -> str:
@@ -619,6 +645,67 @@ def build_opencode(folder: Path, label: str | None = None, run_id: str | None = 
     return _run(run, run_id, label, model or "", "opencode", case, tokens)
 
 
+# ---------- claims and sources of the run's case ----------
+
+CLAIM_FIELDS = ("id", "type", "text", "source", "where", "quote")
+
+
+def find_case_dir(run_folder: str | None, case: str | None) -> Path | None:
+    """`<run folder>/cases/<case>` when it holds claims; a case is a plain folder name."""
+    if not run_folder or not case or not re.fullmatch(r"[\w-]+", case):
+        return None
+    cdir = Path(run_folder) / "cases" / case
+    return cdir if (cdir / "claims.jsonl").is_file() else None
+
+
+def _jsonl(path: Path) -> list[dict]:
+    rows = []
+    if path.is_file():
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            try:
+                rows.append(json.loads(line))
+            except ValueError:
+                continue
+    return rows
+
+
+def _sha(path: Path) -> str | None:
+    return hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None
+
+
+def _source_link(entry: dict, cdir: Path, mats: list[dict]) -> str | None:
+    """The original material as a link relative to demo/replay/, only when it is a repo file."""
+    if entry.get("kind") != "file" or not entry.get("origin"):
+        return None
+    repo = root().resolve()
+    page = repo / "demo" / "replay"
+    orig = (cdir / entry["origin"]).resolve()
+    if orig.is_relative_to(repo) and orig.is_file():
+        return Path(os.path.relpath(orig, page)).as_posix()
+    want = entry.get("sha256") or _sha(orig)
+    for m in mats:
+        cand = (page / m["path"]).resolve()
+        if (cand.name == orig.name and cand.is_relative_to(repo) and want
+                and _sha(cand) == want):
+            return m["path"]
+    return None
+
+
+def case_evidence(cdir: Path, mats: list[dict]) -> dict:
+    """Active and replaced claims and the sources they cite, scrubbed, without absolute paths."""
+    cwd = str(cdir.resolve().parent.parent)
+    claims = []
+    for c in _jsonl(cdir / "claims.jsonl"):
+        if c.get("status") not in ("active", "replaced") or not c.get("id"):
+            continue
+        claims.append({k: (redact(str(c[k]), cwd) if c.get(k) is not None else None)
+                       for k in CLAIM_FIELDS})
+    sources = [{"id": s["id"], "title": redact(str(s.get("title") or s["id"]), cwd),
+                "kind": s.get("kind") or "", "path": _source_link(s, cdir, mats)}
+               for s in _jsonl(cdir / "sources" / "index.jsonl") if s.get("id")]
+    return {"claims": claims, "sources": sources}
+
+
 # ---------- the bundle ----------
 
 def from_v1(script: dict, run_id: str) -> dict:
@@ -695,7 +782,8 @@ def write_bundle(target: Path, bundle: dict) -> bool:
 
 def export(case: str | None = None, transcripts: str | None = None, out: str | None = None,
            label: str | None = None, as_json: bool = False, opencode: str | None = None,
-           run_id: str | None = None, model: str | None = None) -> int:
+           run_id: str | None = None, model: str | None = None,
+           case_dir: str | None = None) -> int:
     """Add (or replace by id) one run in demo/replay/script.json and embed it into the page."""
     from strat.cost import transcripts_dir
 
@@ -711,6 +799,12 @@ def export(case: str | None = None, transcripts: str | None = None, out: str | N
         if not folder.is_dir() or not any(folder.glob("*.jsonl")):
             raise StratError(f"no session transcripts in {folder}", UNAVAILABLE)
         run = build(folder, label, run_id, model, case)
+    run_folder = run.pop("_cwd", None)
+    if case_dir and not (Path(case_dir) / "claims.jsonl").is_file():
+        raise StratError(f"no claims.jsonl in {case_dir}", UNAVAILABLE)
+    cdir = Path(case_dir) if case_dir else find_case_dir(run_folder, run["case"])
+    if cdir:
+        run.update(case_evidence(cdir, run["materials"]))
     target = Path(out) if out else root() / "demo" / "replay" / "script.json"
     bundle = put_run(load_bundle(target), run)
     embedded = write_bundle(target, bundle)
@@ -718,7 +812,7 @@ def export(case: str | None = None, transcripts: str | None = None, out: str | N
     usd = "no price" if m["usd"] is None else f"{m['usd']} usd (API list prices)"
     emit(f"wrote {target}: run {run['id']} ({run['harness']}, {run['model'] or 'model unknown'}): "
          f"{len(run['events'])} events, {m['steps']} steps, {m['gates']} gates, "
-         f"{m['minutes']} min, {usd}; bundle has {len(bundle['runs'])} runs"
+         f"{m['minutes']} min, {usd}, {len(run.get('claims', []))} claims; bundle has {len(bundle['runs'])} runs"
          + ("; embedded into index.html" if embedded else ""),
          {"out": str(target), "id": run["id"], "meta": m, "runs": [r["id"] for r in bundle["runs"]],
           "embedded": embedded}, as_json)

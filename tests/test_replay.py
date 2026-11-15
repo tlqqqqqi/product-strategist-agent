@@ -267,8 +267,11 @@ def test_export_embeds_the_bundle_into_the_page(exported, tmp_path):
     block = re.search(r'<script id="replay-data" type="application/json">(.*?)</script>', html,
                       re.S)
     assert json.loads(block.group(1)) == bundle
-    # self-contained: works from file://, nothing loaded from the network
-    assert not re.search(r'(src|href)\s*=\s*["\']?(https?:)?//', html)
+    # works from file://: no scripts or data from the network; only the Google Fonts stylesheet,
+    # with local fallbacks when it does not load
+    remote = re.findall(r'(?:src|href)\s*=\s*["\']?((?:https?:)?//[^"\'\s>]+)', html)
+    assert all(re.match(r"https://fonts\.(googleapis|gstatic)\.com(/|$)", u) for u in remote), remote
+    assert not re.search(r"<script[^>]+src=", html)
     assert "@import" not in html and not re.search(r"url\(\s*['\"]?https?:", html)
 
 
@@ -358,3 +361,340 @@ def test_gate_numbers_are_read_whole():
     from strat import replay
 
     assert replay.GATE_CMD.search("bin/strat gate check 12").group(2) == "12"
+
+
+# ---------- claims and sources of the run's case ----------
+
+def _case_dir(tmp_path):
+    """A case folder outside the repo, as a run leaves it: claims, sources, a copied material."""
+    import hashlib
+
+    cdir = tmp_path / "clone" / "cases" / "family-cloud-price"
+    (cdir / "sources").mkdir(parents=True)
+    (cdir / "materials").mkdir()
+    (cdir / "analysis").mkdir()
+    src = REPO / "demo" / "family-app" / "materials" / "metrics.xlsx"
+    shutil.copy(src, cdir / "materials" / "metrics.xlsx")
+    (cdir / "materials" / "product.docx").write_bytes(b"not the repo file")
+    (cdir / "analysis" / "q1.txt").write_text("x = 1\n", encoding="utf-8")
+    sha = hashlib.sha256(src.read_bytes()).hexdigest()
+    sources = [
+        {"id": "S001", "kind": "file", "origin": "materials/metrics.xlsx", "title": "metrics.xlsx",
+         "sha256": sha, "snapshot": "sources/S001.md"},
+        {"id": "S002", "kind": "file", "origin": "materials/product.docx", "title": "product.docx",
+         "sha256": "0" * 64, "snapshot": "sources/S002.md"},
+        {"id": "S003", "kind": "analysis", "origin": "analysis/q1.txt", "title": "q1.txt",
+         "sha256": "1" * 64, "snapshot": "sources/S003.md"},
+    ]
+    (cdir / "sources" / "index.jsonl").write_text(
+        "".join(json.dumps(s, ensure_ascii=False) + "\n" for s in sources), encoding="utf-8")
+    claims = [
+        {"id": "C001", "type": "fact", "status": "active", "text": "Платящих стало на 59,3% меньше.",
+         "source": "S001", "where": "cohorts!A2:D2", "quote": "promo 9800 4550 1850",
+         "kind": "product_metric", "check": {"p": 0.9}, "supports": []},
+        {"id": "C002", "type": "fact", "status": "replaced", "text": "Старая цифра.",
+         "source": "S003", "where": "/Users/someone/clone/cases/x/analysis/q1.txt",
+         "quote": "key=tvly-FAKEcase0123456789abcdef", "replaced_by": "C001"},
+        {"id": "C003", "type": "fact", "status": "withdrawn", "text": "Отозвано.",
+         "source": "S001", "where": "a", "quote": "b"},
+        {"id": "C004", "type": "gap", "status": "active", "text": "Нет данных о причинах.",
+         "source": None, "where": None, "quote": None},
+    ]
+    (cdir / "claims.jsonl").write_text(
+        "".join(json.dumps(c, ensure_ascii=False) + "\n" for c in claims), encoding="utf-8")
+    return cdir
+
+
+def _strings(v):
+    if isinstance(v, str):
+        yield v
+    elif isinstance(v, dict):
+        for x in v.values():
+            yield from _strings(x)
+    elif isinstance(v, list):
+        for x in v:
+            yield from _strings(x)
+
+
+def test_export_embeds_the_claims_and_sources_of_the_case(strat, tmp_path):
+    cdir = _case_dir(tmp_path)
+    out = tmp_path / "replay" / "script.json"
+    run = _export(strat, out, "--opencode", str(OPENCODE), "--id", "flash",
+                  "--case-dir", str(cdir))["runs"][0]
+    assert [c["id"] for c in run["claims"]] == ["C001", "C002", "C004"]  # never withdrawn
+    assert all(set(c) == {"id", "type", "text", "source", "where", "quote"} for c in run["claims"])
+    c1, c2, c4 = run["claims"]
+    assert c1 == {"id": "C001", "type": "fact", "text": "Платящих стало на 59,3% меньше.",
+                  "source": "S001", "where": "cohorts!A2:D2", "quote": "promo 9800 4550 1850"}
+    assert c2["quote"] == "key=[скрыто]" and c2["where"] == "[путь скрыт]"
+    assert c4["source"] is None and c4["quote"] is None
+    assert run["sources"] == [
+        # the material is the repo's own file (same bytes): linked relative to demo/replay/
+        {"id": "S001", "title": "metrics.xlsx", "kind": "file",
+         "path": "../family-app/materials/metrics.xlsx"},
+        # same name, other bytes, and an analysis output: not in the repo, no link
+        {"id": "S002", "title": "product.docx", "kind": "file", "path": None},
+        {"id": "S003", "title": "q1.txt", "kind": "analysis", "path": None},
+    ]
+    for s in _strings({"claims": run["claims"], "sources": run["sources"]}):
+        assert not s.startswith("/") and str(tmp_path) not in s and "tvly-FAKE" not in s
+
+
+def test_the_case_folder_is_found_under_the_run_folder(tmp_path):
+    from strat import replay
+
+    cdir = _case_dir(tmp_path)
+    run_folder = str(tmp_path / "clone")
+    assert replay.find_case_dir(run_folder, "family-cloud-price") == cdir
+    assert replay.find_case_dir(run_folder, "other-case") is None
+    assert replay.find_case_dir(None, "family-cloud-price") is None
+    assert replay.find_case_dir(run_folder, "../clone") is None  # a case is a plain name
+
+
+def test_a_run_without_its_case_folder_has_no_claims(opencode):
+    run, _ = opencode
+    assert "claims" not in run and "sources" not in run
+
+
+# ---------- the page ----------
+
+def _page_with(tmp_path, bundle):
+    page_path = tmp_path / "page" / "index.html"
+    page_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(PAGE, page_path)
+    from strat.replay import embed
+
+    embed(page_path, bundle)
+    return page_path
+
+
+class _Browser:
+    """One chromium page per test; Google Fonts answered locally; page errors collected."""
+
+    def __enter__(self):
+        sync_playwright = _chromium()
+        self._pw = sync_playwright().start()
+        try:
+            self.browser = self._pw.chromium.launch()
+        except Exception as exc:  # browser binary not installed
+            self._pw.stop()
+            pytest.skip(f"no chromium: {exc}")
+        self.errors = []
+        return self
+
+    def open(self, page_path, hash_="", width=1280):
+        page = self.browser.new_page(viewport={"width": width, "height": 900})
+        page.route(re.compile(r"https://fonts\.(googleapis|gstatic)\.com/.*"),
+                   lambda r: r.fulfill(status=200, body="", content_type="text/css"))
+        page.on("pageerror", lambda e: self.errors.append(str(e)))
+        page.on("console", lambda m: m.type == "error" and self.errors.append(m.text))
+        page.goto(page_path.as_uri() + hash_)
+        return page
+
+    def __exit__(self, *exc):
+        self.browser.close()
+        self._pw.stop()
+
+
+def _nav_units(run):
+    return sum(1 + ("gate" in e) for e in run["events"] if e["kind"] != "steps")
+
+
+def _three_runs(strat, tmp_path):
+    out = tmp_path / "replay" / "script.json"
+    _export(strat, out, "--transcripts", str(FIXTURE), "--id", "cc", "--label", "первый")
+    _export(strat, out, "--opencode", str(OPENCODE), "--id", "flash", "--model",
+            "DeepSeek V4 Flash", "--label", "второй")
+    return _export(strat, out, "--transcripts", str(FIXTURE), "--id", "cc2", "--model",
+                   "GPT-6.1 Terra", "--label", "третий")
+
+
+def test_page_switches_between_runs_and_remembers_the_run(strat, tmp_path):
+    bundle = _three_runs(strat, tmp_path)
+    page_path = _page_with(tmp_path, bundle)
+    with _Browser() as b:
+        page = b.open(page_path, "#speed=max&autoplay=1")
+        page.wait_for_selector("#chat[data-done='1']")
+        pills = page.locator("#models .model")
+        assert pills.count() == 3
+        assert pills.nth(1).inner_text() == "DeepSeek V4 Flash"
+        assert pills.nth(0).get_attribute("aria-pressed") == "true"
+        pills.nth(1).click()
+        page.wait_for_selector("#chat[data-done='1']")
+        assert pills.nth(1).get_attribute("aria-pressed") == "true"
+        assert "run=flash" in page.evaluate("location.hash")
+        assert bundle["runs"][1]["events"][-1]["text"] in page.inner_text("#chat")
+        # the run in the hash is the one shown on load
+        page2 = b.open(page_path, "#run=cc2&speed=max&autoplay=1")
+        page2.wait_for_selector("#chat[data-done='1']")
+        assert page2.locator("#models .model").nth(2).get_attribute("aria-pressed") == "true"
+        assert "запись реального прогона" in page2.inner_text("body").lower()
+    assert not b.errors, b.errors
+
+
+def test_committed_page_plays_every_run_to_the_end_without_errors():
+    bundle = json.loads((REPO / "demo" / "replay" / "script.json").read_text(encoding="utf-8"))
+    assert len(bundle["runs"]) >= 3
+    with _Browser() as b:
+        for run in bundle["runs"]:
+            page = b.open(PAGE, f"#run={run['id']}&speed=max&autoplay=1")
+            page.wait_for_selector("#chat[data-done='1']", timeout=20_000)
+            assert page.inner_text("#pos") == f"{_nav_units(run)} из {_nav_units(run)}"
+            assert page.locator("#next").is_disabled()
+            for w in (390,):
+                page.set_viewport_size({"width": w, "height": 800})
+                assert page.evaluate("document.documentElement.scrollWidth") <= w
+    assert not b.errors, b.errors
+
+
+def test_prev_and_next_jump_between_messages_and_skip_steps(strat, tmp_path, exported):
+    bundle, _ = exported
+    run = bundle["runs"][0]
+    page_path = _page_with(tmp_path, bundle)
+    total = _nav_units(run)
+    with _Browser() as b:
+        page = b.open(page_path, "#speed=max&autoplay=0")
+        page.wait_for_selector("#chat .current")
+        assert page.inner_text("#pos") == f"1 из {total}"
+        assert page.locator("#prev").is_disabled()
+        kinds = []
+        for i in range(2, total + 1):
+            page.click("#next")
+            assert page.inner_text("#pos") == f"{i} из {total}"
+            cur = page.locator("#chat .current")
+            assert cur.count() == 1
+            kinds.append(cur.get_attribute("data-kind"))
+        assert page.locator("#next").is_disabled()
+        assert set(kinds) <= {"user", "agent", "question", "gate"} and "gate" in kinds
+        assert page.locator("#chat .fold").count() == sum(e["kind"] == "steps"
+                                                          for e in run["events"])
+        # steps are folded by default and open on a click
+        fold = page.locator("#chat .fold").first
+        assert not fold.locator(".steps").is_visible()
+        fold.locator("button").click()
+        assert fold.locator(".steps").is_visible()
+        page.keyboard.press("ArrowLeft")
+        assert page.inner_text("#pos") == f"{total - 1} из {total}"
+    assert not b.errors, b.errors
+
+
+def _bundle_with(events, claims=None, sources=None):
+    run = {"id": "x", "label": "тест", "model": "m", "harness": "opencode", "case": "c",
+           "meta": {"date": "2026-11-15", "start": "2026-11-15T10:00:00+00:00", "minutes": 1.0,
+                    "usd": None, "tokens": {"input": 1000, "output": 10, "cache_read": 0},
+                    "sessions": 1, "gates": 0, "steps": 0, "priced": False},
+           "materials": [], "events": events}
+    if claims is not None:
+        run["claims"], run["sources"] = claims, sources
+    return {"version": 2, "runs": [run]}
+
+
+def test_a_question_window_has_one_tab_per_question_and_marks_the_answer(tmp_path):
+    q = {"kind": "question", "t": 1, "answers": [
+        {"question": "Что важнее?", "answer": "Выручка"},
+        {"question": "Какая когорта?", "answer": "Майская"}],
+         "questions": [
+             {"header": "Метрика", "question": "Что важнее?", "options": ["Выручка", "LTV"],
+              "multi": False},
+             {"header": "Когорта", "question": "Какая когорта?", "options": ["Вся база", "Майская"],
+              "multi": False}]}
+    bundle = _bundle_with([{"kind": "user", "text": "Вопрос", "t": 0}, q,
+                           {"kind": "agent", "text": "Ок", "t": 2}])
+    with _Browser() as b:
+        page = b.open(_page_with(tmp_path, bundle), "#speed=max&autoplay=1")
+        page.wait_for_selector("#chat[data-done='1']")
+        tabs = page.locator(".qwin [role=tab]")
+        assert [tabs.nth(i).inner_text() for i in range(2)] == ["Метрика", "Когорта"]
+        assert tabs.nth(0).get_attribute("aria-selected") == "true"
+        assert page.locator(".qwin .opt.sel").inner_text() == "Выручка"
+        tabs.nth(1).click()
+        assert tabs.nth(1).get_attribute("aria-selected") == "true"
+        assert "Какая когорта?" in page.inner_text(".qwin")
+        assert page.locator(".qwin .opt.sel").inner_text() == "Майская"
+    assert not b.errors, b.errors
+
+
+def test_agent_text_signs_figures_and_opens_claim_cards(tmp_path):
+    text = ("Отток **в когорте**: −59,3% [C001], ARPU +45 ₽ (C004); `bin/strat <x>` "
+            "<img src=x onerror=alert(1)> *по умолчанию*\n- пункт")
+    claims = [{"id": "C001", "type": "fact", "text": "Платящих стало меньше.", "source": "S001",
+               "where": "cohorts!A2", "quote": "9800 4550"},
+              {"id": "C004", "type": "gap", "text": "Нет данных.", "source": None, "where": None,
+               "quote": None}]
+    sources = [{"id": "S001", "title": "metrics.xlsx", "kind": "file",
+                "path": "../family-app/materials/metrics.xlsx"}]
+    events = [{"kind": "user", "text": "Вопрос", "t": 0}, {"kind": "agent", "text": text, "t": 1}]
+    with _Browser() as b:
+        page = b.open(_page_with(tmp_path, _bundle_with(events, claims, sources)),
+                      "#speed=max&autoplay=1")
+        page.wait_for_selector("#chat[data-done='1']")
+        msg = page.locator(".msg.agent")
+        assert msg.locator(".neg").inner_text() == "−59,3%"
+        assert msg.locator(".pos").inner_text() == "+45 ₽"
+        assert msg.locator("strong").inner_text() == "в когорте"
+        assert msg.locator("em").inner_text() == "по умолчанию"
+        assert msg.locator("code").inner_text() == "bin/strat <x>"
+        assert msg.locator("img").count() == 0 and "<img src=x" in msg.inner_text()
+        assert msg.locator("li").inner_text() == "пункт"
+        assert msg.locator(".cite").count() == 2
+        assert msg.locator(".cite").nth(1).get_attribute("class").split() == ["cite", "as"]
+        msg.locator(".cite").first.click()
+        card = page.locator("#ccard")
+        page.wait_for_selector("#ccard.on")
+        assert "Платящих стало меньше." in card.inner_text()
+        link = card.locator("a.cc-file")
+        assert link.get_attribute("href") == "../family-app/materials/metrics.xlsx"
+        assert link.get_attribute("download") == "metrics.xlsx"
+        page.keyboard.press("Escape")
+        page.wait_for_selector("#ccard", state="hidden")
+        msg.locator(".cite").nth(1).click()
+        page.wait_for_selector("#ccard.on")
+        assert "известное неизвестное" in card.inner_text()
+    assert not b.errors, b.errors
+
+
+def test_citations_without_claims_are_plain_chips(tmp_path):
+    events = [{"kind": "user", "text": "Вопрос", "t": 0},
+              {"kind": "agent", "text": "См. C025.", "t": 1}]
+    with _Browser() as b:
+        page = b.open(_page_with(tmp_path, _bundle_with(events)), "#speed=max&autoplay=1")
+        page.wait_for_selector("#chat[data-done='1']")
+        chip = page.locator(".msg.agent .cite")
+        assert chip.inner_text() == "C025" and chip.evaluate("e => e.tagName") == "SPAN"
+        chip.click()
+        assert page.locator("#ccard").is_hidden()
+    assert not b.errors, b.errors
+
+
+def test_info_panel_opens_over_the_chat(strat, exported, tmp_path):
+    bundle, _ = exported
+    with _Browser() as b:
+        page = b.open(_page_with(tmp_path, bundle), "#speed=max&autoplay=1")
+        page.wait_for_selector("#chat[data-done='1']")
+        assert not page.locator("#info").is_visible()
+        before = page.locator("#chat").bounding_box()
+        page.click("#infoBtn")
+        page.wait_for_selector("#info.on")
+        assert page.get_attribute("#infoBtn", "aria-expanded") == "true"
+        assert "Gate 1" in page.inner_text("#info")
+        assert page.locator("#chat").bounding_box() == before  # overlays, does not push
+        page.keyboard.press("Escape")
+        page.wait_for_selector("#info", state="hidden")
+    assert not b.errors, b.errors
+
+
+def test_redact_hides_the_local_user_name_and_export_refuses_it(monkeypatch):
+    from strat import replay
+
+    monkeypatch.setattr(replay.getpass, "getuser", lambda: "alicebob")
+    out = replay.redact("-rw-r--r--  1 alicebob  wheel  7003 Nov 15 metrics.xlsx; alicebobby")
+    assert out == "-rw-r--r--  1 [скрыто]  wheel  7003 Nov 15 metrics.xlsx; alicebobby"
+    assert replay.leaked({"x": "drwxr-xr-x 5 alicebob staff"}) == ["alicebob"]
+
+
+def test_redact_keeps_long_snake_case_metric_names():
+    from strat.replay import redact
+
+    name = "promo_3_months_free_aug_to_oct_change_pct"
+    assert redact(f"{name} = -59.34 %") == f"{name} = -59.34 %"
+    assert redact("key Ab3dEf6hIj9kLm2nOp5qRs8tUv1wXy4zAb7dEf0hIj") == "key [скрыто]"
