@@ -147,3 +147,27 @@ def test_redact_keeps_slugs_and_dev_null_but_hides_keys_and_foreign_paths():
     assert redact("token Ab3dEf6hIj9kLm2nOp5qRs8tUv1wXy4zAb7dEf0hIj") == "token [скрыто]"
     assert redact("cat /work/clone/cases/x/memo.md /etc/hosts", cwd="/work/clone") == \
         "cat cases/x/memo.md [путь скрыт]"
+
+
+def test_usage_after_the_last_visible_reply_does_not_crash(tmp_path):
+    """A turn whose model reply was empty (e.g. interrupted) still has usage; export keeps going."""
+    from strat import replay
+
+    rows = [
+        {"type": "user", "timestamp": "2026-11-15T07:00:00.000Z", "sessionId": "s", "cwd": "/w",
+         "message": {"role": "user", "content": "Продолжи кейс"}},
+        {"type": "assistant", "timestamp": "2026-11-15T07:00:05.000Z", "sessionId": "s",
+         "cwd": "/w", "message": {"id": "m1", "model": "claude-opus-5-5", "role": "assistant",
+                                  "content": [{"type": "thinking", "thinking": "..."}],
+                                  "usage": {"input_tokens": 1000, "output_tokens": 50}}},
+    ]
+    (tmp_path / "s.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+    script = replay.build(tmp_path)
+    assert [e["kind"] for e in script["events"]] == ["user"]
+    assert script["meta"]["usd"] > 0
+
+
+def test_gate_numbers_are_read_whole():
+    from strat import replay
+
+    assert replay.GATE_CMD.search("bin/strat gate check 12").group(2) == "12"

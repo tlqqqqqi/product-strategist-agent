@@ -89,6 +89,17 @@ def test_edited_data_fails_the_check_and_names_the_figure(strat, case):
     assert "materials/sales.csv changed" in r.err
 
 
+def test_changed_input_is_reported_even_when_the_figures_still_match(strat, case):
+    shutil.copy(FIXTURES / "sales.csv", case / "materials" / "sales.csv")
+    run_script(case, "q2_sales", SALES_SCRIPT)
+    sid = register(strat, "analysis/q2_sales.txt")
+    data = case / "materials" / "sales.csv"
+    data.write_text(data.read_text().replace("east,", "east-1,"))  # no figure uses the region
+    r = strat("analysis", "check", sid)
+    assert r.code == 0, r.err  # the figures still reproduce
+    assert "materials/sales.csv changed" in r.out + r.err
+
+
 def test_check_refuses_a_non_analysis_source(strat, case):
     sid = register(strat, "materials/metrics.xlsx")
     r = strat("analysis", "check", sid)

@@ -15,8 +15,11 @@ a claim cites by element name.
 It never submits a form, logs in, signs up or pays, and the CLI enforces it: a plan cannot type
 into fields; a click on a submit button, a password field, or anything that reads like login,
 sign-up or payment ("Войти", "Купить", "Подключить", "Оформить", /checkout, /login) is refused;
-the page's own form submissions and every request other than GET are blocked. A refused click
-stops the flow and is logged. Do not try to get around a refusal with another selector or a
+the page's own form submissions and every request other than GET, HEAD and OPTIONS are blocked
+(OPTIONS stays: browsers send it before ordinary cross-site reads). Before each screenshot the
+CLI checks where the page landed: a jump to another site than the start URL and the plan's own
+`goto` steps, or to a login, cart or payment address (also after a redirect), is refused. A
+refusal stops the flow and is logged. Do not try to get around a refusal with another selector or a
 direct URL: the flow ends there. What lies behind a login or a payment comes from the user
 (their screenshots, registered with `bin/strat source add`) or stays a `gap` claim.
 

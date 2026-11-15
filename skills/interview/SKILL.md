@@ -24,7 +24,8 @@ Three jobs, all leading to claims with a source and a type:
      `> Согласие: перед началом спросить согласие на запись и обработку ответов; имена, телефоны и почту в запись не вносить.`
      The CLI refuses a guide without a `> Согласие:` line before the first question.
   3. `Цель:` which plan questions (Q1, Q2) it serves.
-  4. `## Вопросы` - 5 to 8 numbered questions (`1. ...`), the CLI reads only numbered lines.
+  4. `## Вопросы` - numbered questions (`1. ...`), the CLI reads only numbered lines. Aim for
+     5 to 8; the CLI needs at least one and caps a persona session at `persona.max_questions`.
 - Questions are non-leading: about past behaviour and real episodes, not opinions or the future.
   - Bad: «Вам ведь не понравилось повышение цены?» Good: «Вспомните, когда вы последний раз
     меняли тариф. Что тогда происходило?»

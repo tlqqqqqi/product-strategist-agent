@@ -12,7 +12,9 @@ import sys
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
-ROOT = Path(os.environ.get("CLAUDE_PROJECT_DIR") or Path(__file__).resolve().parents[1])
+# Every environment calls the copy of this script inside the project, so the project is the
+# script's own folder; an inherited CLAUDE_PROJECT_DIR may point at some other project.
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def state_text() -> str:

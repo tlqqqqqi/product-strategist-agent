@@ -66,6 +66,38 @@ def test_plan_with_typing_is_refused_before_any_browser(strat, case, tmp_path):
     assert r.code == 1 and "fill" in r.err
 
 
+def test_plan_may_scroll_and_goto_must_be_a_string(tmp_path):
+    ok = tmp_path / "ok.json"
+    ok.write_text(json.dumps({"steps": [{"name": "top"}, {"name": "below", "scroll": True}]}))
+    assert browser.load_plan(str(ok))[1]["scroll"] is True
+    bad = tmp_path / "bad.json"
+    bad.write_text(json.dumps({"steps": [{"name": "a", "goto": 123}]}))
+    with pytest.raises(browser.StratError, match="http"):
+        browser.load_plan(str(bad))
+    notbool = tmp_path / "nb.json"
+    notbool.write_text(json.dumps({"steps": [{"name": "a", "scroll": "yes"}]}))
+    with pytest.raises(browser.StratError, match="scroll"):
+        browser.load_plan(str(notbool))
+
+
+@pytest.mark.parametrize("landed, why", [
+    ("https://cloud.example.org/login?next=/", "login"),
+    ("https://evil.example.net/promo", "another site"),
+    ("ftp://cloud.example.org/x", "another site"),
+])
+def test_landing_page_off_the_public_flow_is_refused(landed, why):
+    sites = browser.allowed_sites("https://www.example.org/tariffs", [])
+    assert why in browser.landing_refusal(landed, sites)
+
+
+def test_landing_page_on_the_same_site_or_a_planned_one_is_allowed():
+    sites = browser.allowed_sites("https://www.example.org/tariffs",
+                                  [{"name": "b", "goto": "https://other.example.com/plans"}])
+    for url in ("https://example.org/plans", "https://cloud.example.org/family",
+                "https://other.example.com/plans#x", "about:blank"):
+        assert browser.landing_refusal(url, sites) is None, url
+
+
 def test_where_names_an_element_and_the_quote_is_its_text():
     shot = json.dumps({"url": "u", "viewport": [1, 1], "targets": {
         "price": {"box": [0, 0, 1, 1], "text": "1 ТБ — 249 ₽"},

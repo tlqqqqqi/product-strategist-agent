@@ -84,3 +84,13 @@ def test_copilot_detected_by_env(tmp_path):
 def test_unknown_format_still_never_breaks_the_session(tmp_path):
     out = run_hook_args(tmp_path, "--format", "nonsense")
     assert "using-strategist" in out
+
+
+def test_project_is_the_folder_of_the_hook_not_an_inherited_variable(tmp_path):
+    """Another IDE started from a Claude Code terminal inherits CLAUDE_PROJECT_DIR of some other
+    folder; the hook still reads this project's bootstrap and state."""
+    other = tmp_path / "other-project"
+    other.mkdir()
+    out = run_hook_args(tmp_path, "--format", "qwen", CLAUDE_PROJECT_DIR=str(other))
+    text = FORMATS["qwen"](out)
+    assert "name: using-strategist" in text and "no active case" in text

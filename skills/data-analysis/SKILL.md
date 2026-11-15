@@ -99,7 +99,8 @@ is fixed or the problem is stated in the claim text.
 | `share(part, whole, name)` | part / whole in %, same period required |
 
 Units are normalized (`₽`, `руб` -> `RUB`; `тыс. ₽` -> `thousand RUB`; `п.п.` -> `p.p.`); an
-unknown unit is compared as written.
+unknown unit is compared as written. The unit label is all the helper sees: a change already in
+percentage points must be declared `p.p.`, not `%`, or `diff` will treat it as a rate.
 
 ## Limits (tell the user when they matter)
 

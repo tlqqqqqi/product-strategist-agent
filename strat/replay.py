@@ -41,7 +41,7 @@ SECRET_PATTERNS = [
 ABS_PATH = re.compile(r"(?<![\w.:/~-])(?!/dev/null\b)(?:~|/[A-Za-z0-9._-]+)(?:/[A-Za-z0-9._@-]+)+/?")
 TAG_BLOCK = re.compile(r"<([a-z][a-z0-9_-]*)>.*?</\1>", re.S)
 ANSWER = re.compile(r'"((?:[^"\\]|\\.)*)"="((?:[^"\\]|\\.)*)"')
-GATE_CMD = re.compile(r"strat gate (check|approve) (\d)")
+GATE_CMD = re.compile(r"strat gate (check|approve) (\d+)")
 
 
 def _hide_secrets(text: str) -> str:
@@ -275,7 +275,7 @@ def build(folder: Path, label: str | None = None) -> dict:
     if not events:
         raise StratError("no conversation in the transcripts", UNAVAILABLE)
     if pending["usd"]:
-        last = next(e for e in reversed(events) if e["kind"] != "user")
+        last = next((e for e in reversed(events) if e["kind"] != "user"), events[-1])
         last["usd"] = last.get("usd", 0.0) + pending["usd"]
 
     # gate answers: approved later -> the first button, otherwise the second

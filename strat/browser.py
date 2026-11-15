@@ -28,7 +28,7 @@ from strat.sources import FLAG_NOTE, register, sha256
 
 VIEWPORT = (1440, 900)
 NAME = re.compile(r"^[a-z0-9][a-z0-9_-]{0,47}$")
-STEP_KEYS = {"name", "click", "goto", "targets", "wait"}
+STEP_KEYS = {"name", "click", "goto", "scroll", "targets", "wait"}
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 MAX_AUTO_TARGETS = 120
 INSTALL_HINT = ("install the optional browser: `.venv/bin/python -m pip install -e '.[browser]'` "
@@ -156,7 +156,11 @@ def load_plan(path: str | None) -> list[dict] | None:
         if "click" in step and "goto" in step:
             raise StratError(f"{path}: step {i} has both click and goto; split it")
         if "goto" in step:
+            if not isinstance(step["goto"], str):
+                raise StratError(f"{path}: step {i} goto must be an http(s) URL string")
             _check_url(step["goto"])
+        if "scroll" in step and not isinstance(step["scroll"], bool):
+            raise StratError(f"{path}: step {i} scroll is true or false")
         targets = step.get("targets", {})
         if not isinstance(targets, dict) or not all(
                 NAME.match(str(k)) and isinstance(v, str) for k, v in targets.items()):
@@ -172,6 +176,34 @@ def _check_url(url: str) -> None:
     if RISKY_URL.search(url):
         raise StratError(f"{url}: refused, looks like a login, sign-up, cart or payment page; "
                          "the browser walks public pages only")
+
+
+def _site(host: str) -> str:
+    """The registrable part of a host, approximated as its last two labels."""
+    return ".".join(host.lower().rstrip(".").split(".")[-2:])
+
+
+def allowed_sites(url: str, plan: list[dict] | None) -> set[str]:
+    """Sites the flow may land on: the start URL's and those of the plan's own goto steps."""
+    from urllib.parse import urlsplit
+
+    urls = [url] + [s["goto"] for s in plan or [] if isinstance(s.get("goto"), str)]
+    return {_site(urlsplit(u).hostname or "") for u in urls}
+
+
+def landing_refusal(url: str, sites: set[str]) -> str | None:
+    """Why a page the browser landed on (after a click, a redirect or a script) is off the public
+    flow, or None. Checked before every capture, since redirects never reach the request guard."""
+    from urllib.parse import urlsplit
+
+    if url == "about:blank":
+        return None
+    parts = urlsplit(url)
+    if parts.scheme not in ("http", "https") or _site(parts.hostname or "") not in sites:
+        return f"a jump to another site ({url})"
+    if RISKY_URL.search(url):
+        return f"a page that looks like a login, sign-up, cart or payment page ({url})"
+    return None
 
 
 def _playwright():
@@ -305,6 +337,7 @@ def capture(url: str, flow: str, case: str | None = None, steps: int = 5,
     else:
         todo = planned[:steps]
     blocked: list[str] = []
+    sites = allowed_sites(url, planned)
     started = time.monotonic()
     refused_at = None
     with sync_playwright() as p:
@@ -345,6 +378,9 @@ def capture(url: str, flow: str, case: str | None = None, steps: int = 5,
                 try:
                     if not _act(page, walk, item):
                         break  # the page has no more screens
+                    off = landing_refusal(page.url, sites)
+                    if off:
+                        raise Refused(off)
                     walk.capture(n, item["name"], item.get("targets", {}))
                 except Refused as exc:
                     refused_at = (n, item, str(exc))
@@ -366,11 +402,13 @@ def capture(url: str, flow: str, case: str | None = None, steps: int = 5,
     ids = ",".join(s["id"] for s in walk.shots)
     if refused_at:
         n, item, reason = refused_at
-        log_action(cdir, step=step, tool="capture", in_=f"click {item['click']} at {url}",
+        action = next((f"{k} {item[k]}" for k in ("click", "goto", "scroll") if k in item),
+                      "step")
+        log_action(cdir, step=step, tool="capture", in_=f"{action} at {url}",
                    out=f"shots/{flow}/", status="refused", ref=ids, sec=sec,
                    note=f"step {n} {item['name']}: {reason}")
         kept = ", ".join(s["shot"] for s in walk.shots) or "none"
-        raise StratError(f"refused step {n} ({item['name']}): click on {item['click']!r} is "
+        raise StratError(f"refused step {n} ({item['name']}, {action}): it led to or is "
                          f"{reason}. The browser never submits forms, logs in, signs up or pays. "
                          f"Shots kept: {kept}. Stop the flow here or ask the user for "
                          "screenshots of the rest", FAILED)

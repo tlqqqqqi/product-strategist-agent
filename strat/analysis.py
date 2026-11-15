@@ -337,12 +337,17 @@ def check_source(cdir: Path, entry: dict) -> tuple[list[str], list[str], int]:
         elif _show(new) != _show(old):
             problems.append(f"{origin}: figure {name} does not reproduce: registered "
                             f"{_show(old)}, rerun gives {_show(new)}")
-    if problems:
-        for ref, digest in reg_inputs.items():
-            if now_inputs.get(ref, digest) != digest:
-                problems.append(f"{origin}: input {ref} changed since the output was registered "
-                                "(register the new output and replace the claims that cite it)")
-    return problems, [f"{origin}: {g}" for g in gaps], len(registered) - len(problems)
+    notes = [f"{origin}: {g}" for g in gaps]
+    changed = [ref for ref, digest in reg_inputs.items() if now_inputs.get(ref, digest) != digest]
+    for ref in changed:
+        if problems:
+            problems.append(f"{origin}: input {ref} changed since the output was registered "
+                            "(register the new output and replace the claims that cite it)")
+        else:
+            notes.append(f"{origin}: input {ref} changed since the output was registered; the "
+                         "figures still reproduce")
+    figure_problems = len(problems) - (len(changed) if problems else 0)
+    return problems, notes, len(registered) - figure_problems
 
 
 def _figure_of(cdir: Path, claim: dict, index: dict, cache: dict) -> Figure | None:
