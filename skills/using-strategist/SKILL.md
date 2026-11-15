@@ -42,6 +42,7 @@ Skills for a task at any stage:
 | A figure that needs a calculation, or figures compared across tables | `skills/data-analysis/SKILL.md` |
 | An audio or video file among the materials | `skills/media/SKILL.md` |
 | Challenger calls, verdicts on objections, a debate | `skills/challenge/SKILL.md` |
+| An interview guide, a transcript from the user, model respondents | `skills/interview/SKILL.md` |
 
 Read the skill file before you act on a stage. Method knowledge is in `knowledge/` (start at
 `knowledge/INDEX.md`); document templates are in `knowledge/templates/`.
