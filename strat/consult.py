@@ -296,6 +296,8 @@ def set_verdict(cdir: Path, oid: str | None, verdict: str | None, reason: str | 
         raise StratError("a verdict needs a written --reason")
     rows = _load(cdir)
     o = _find(rows, oid)
+    if verdict == "not-chosen":
+        _check_not_chosen(cdir, o)
     cited = CLAIM_ID.findall(reason)
     if verdict == "rejected":
         if not cited:
@@ -314,6 +316,20 @@ def set_verdict(cdir: Path, oid: str | None, verdict: str | None, reason: str | 
                note=f"{verdict}: {reason.strip()[:200]}")
     emit(f"{oid}: {verdict}", o, as_json)
     return 0
+
+
+def _check_not_chosen(cdir: Path, o: dict) -> None:
+    """`not-chosen` only after Gate 2 recorded the choice, and never on the chosen option."""
+    from strat.state import load as load_state
+
+    chosen = load_state(cdir).get("chosen_option")
+    if chosen is None:
+        raise StratError("not-chosen needs the user's choice recorded at Gate 2 "
+                         "(`bin/strat gate approve 2 --option N`)")
+    m = re.match(r"\s*Вариант\s+(\d+)\b", str(o.get("target", "")), re.IGNORECASE)
+    if m and int(m.group(1)) == chosen:
+        raise StratError(f"{o['id']} targets option {chosen}, the chosen one: answer it "
+                         "(accepted or rejected with a claim) or ask the user to accept the risk")
 
 
 def _unresolved(o: dict) -> bool:

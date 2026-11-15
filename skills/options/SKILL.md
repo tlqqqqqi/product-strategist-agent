@@ -57,7 +57,8 @@ Log: `bin/strat step options.final --out options.md`
 
 - An explicit choice and yes: if the choice differs from your recommendation, rewrite the
   "Рекомендация" section to record "Выбор руководителя: ..." with the reasons the user gave
-  (as assumption claims), rerun `bin/strat gate check 2`, then `bin/strat gate approve 2` and
+  (as assumption claims), rerun `bin/strat gate check 2`, then `bin/strat gate approve 2 --option N` (N: the number of
+  the chosen option, "Вариант N" in options.md; keep that number when you edit options later) and
   continue with `skills/strategy/SKILL.md`.
 - A correction or a new question to research: `bin/strat step options.revise.<n> --stage research`,
   do the work, return here.

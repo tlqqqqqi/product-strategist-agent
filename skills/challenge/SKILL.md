@@ -54,7 +54,8 @@ bin/strat consult verdict O003 open --reason "Решат данные о ког�
   rejection without an existing claim id.
 - `open`: you cannot answer it with a claim. It is shown to the user at the gate.
 - `not-chosen` (after Gate 2 only): the option it targets was not chosen; the reason names the
-  chosen option.
+  chosen option. Refused for an objection to the chosen option number, even if you renamed or
+  merged it: answer that one or ask the user.
 - `risk-accepted`: the user said in this chat that they accept the risk; the reason quotes
   their words. Never set it on your own.
 

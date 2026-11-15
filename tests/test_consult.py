@@ -205,6 +205,8 @@ def test_gate3_refuses_an_open_major_or_critical_objection(strat, challenged):
     assert r.code == 1
     assert all(f"{oid} [" in r.err and "is open" in r.err for oid in ("O001", "O002", "O003"))
     assert "is open" not in strat("gate", "check", "2").err      # Gate 2 shows them instead
+    st = challenged / "state.json"
+    st.write_text(json.dumps({**json.loads(st.read_text()), "chosen_option": 2}))
     assert strat("consult", "verdict", "O001", "not-chosen", "--reason",
                  "Руководитель выбрал вариант 2").code == 0
     assert strat("consult", "verdict", "O002", "risk-accepted", "--reason",
@@ -219,6 +221,35 @@ def test_gate3_refuses_an_open_major_or_critical_objection(strat, challenged):
                for e in validate.check_file(challenged, "decisions.md"))
     (challenged / "decisions.md").write_text("# Журнал решений\n\n- Принятые риски: O002\n")
     assert not any("risk-accepted" in e for e in validate.check_file(challenged, "decisions.md"))
+
+
+def test_not_chosen_needs_the_gate2_choice_and_refuses_the_chosen_option(strat, challenged):
+    """omp-free repeat of the Flash run: the model renamed its chosen option 1 and marked an
+    objection to "Вариант 1. Оставить как есть" not-chosen. Gate 2 records the chosen number;
+    not-chosen is refused before it and on that number."""
+    import json as _json
+
+    r = strat("consult", "verdict", "O001", "not-chosen", "--reason", "Выбран вариант 2")
+    assert r.code == 1 and "gate approve 2" in r.err              # no choice recorded yet
+    st = challenged / "state.json"
+    state = _json.loads(st.read_text())
+    state["chosen_option"] = 1                                    # as `gate approve 2 --option 1`
+    st.write_text(_json.dumps(state))
+    r = strat("consult", "verdict", "O002", "not-chosen", "--reason", "Вариант без действий отклонён")
+    assert r.code == 1 and "chosen" in r.err                      # O002 targets Вариант 1
+    assert strat("consult", "verdict", "O001", "not-chosen", "--reason",
+                 "Выбран вариант 1").code == 0                    # O001 targets Вариант 3
+
+
+def test_gate2_approval_records_the_chosen_option(strat, ready):
+    assert strat("gate", "check", "1").code == 0
+    assert strat("gate", "approve", "1").code == 0
+    assert strat("judge", "support", "--claim", "C001", "--answer", "yes").code == 0
+    assert strat("gate", "check", "2").code == 0
+    r = strat("gate", "approve", "2")
+    assert r.code == 1 and "--option" in r.err
+    assert strat("gate", "approve", "2", "--option", "3").code == 0
+    assert read_json(ready / "state.json")["chosen_option"] == 3
 
 
 def test_verdict_rules(strat, challenged):

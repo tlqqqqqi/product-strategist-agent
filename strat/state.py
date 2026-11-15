@@ -204,17 +204,24 @@ def step(step_id: str, case: str | None = None, stage: str | None = None, out: s
     return 0
 
 
-def gate_approve(n: int, case: str | None = None, as_json: bool = False) -> int:
-    """Record the user's approval of gate n and advance the stage."""
+def gate_approve(n: int, option: int | None = None, case: str | None = None,
+                 as_json: bool = False) -> int:
+    """Record the user's approval of gate n and advance the stage. Gate 2 records the number of
+    the option the user chose (`not-chosen` verdicts are checked against it)."""
     cdir = case_path(case)
     if replay(cdir, f"gate{n}.approve", as_json, "gate"):
         return 0
+    if n == 2 and option is None:
+        raise StratError("gate 2: pass the number of the option the user chose: "
+                         "`bin/strat gate approve 2 --option N` (N from \"Вариант N\" in options.md)")
     state = load(cdir)
     if state["stage"] != f"gate{n}":
         raise StratError(f"stage is {state['stage']}, not gate{n}: run `strat gate check {n}` "
                          "first and present the gate to the user")
     _recheck_gate(cdir, n)
     state["gates"][str(n)] = "approved"
+    if n == 2:
+        state["chosen_option"] = option
     state["stage"] = AFTER_GATE[n]
     state["next"] = NEXT_AFTER_GATE[n]
     save(cdir, state)

@@ -96,6 +96,9 @@ def build_parser() -> argparse.ArgumentParser:
                         ("approve", "record the user's explicit approval and advance")):
         p = _cmd(gsub, name, help_)
         p.add_argument("n", type=int, choices=[1, 2, 3])
+        if name == "approve":
+            p.add_argument("--option", type=int, default=None,
+                           help="gate 2: the number of the option the user chose")
         p.set_defaults(target=f"gate {name}")
 
     source = sub.add_parser("source", help="sources")
