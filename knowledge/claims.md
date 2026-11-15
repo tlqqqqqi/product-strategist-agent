@@ -33,7 +33,7 @@ day you read it. Never move `as_of` to get past a check.
 
 Shelf life is about claims that describe the current state ("churn is 6.8%", "the competitor
 charges 299 ₽"). A claim about a closed past period that you use as history ("in August 2026
-churn rose to 5.9%", "2,050 users of the May 2026 promo cohort paid in August 2026") is added with
+churn rose to 5.9%", "4,550 users of the May 2026 promo cohort paid in August 2026") is added with
 `--historical`: it never goes stale, and its text must name its period (the CLI checks that the
 year is there). Use it for causes, timelines and before/after comparisons, not to keep an old
 figure alive as if it were current.

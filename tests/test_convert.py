@@ -17,7 +17,7 @@ def test_xlsx_snapshot_has_one_block_per_sheet():
     assert "## sheet: monthly" in text and "## sheet: cohorts" in text
     assert "rows: 7 (header + 6), columns: 4" in text
     assert "month,paying_users,churn_pct,arpu_rub" in text
-    assert "2026-10,42300,6.8,334" in text
+    assert "2026-10,44790,6.8,334" in text
 
 
 def test_xlsx_counts_empty_cells_per_column():
@@ -39,10 +39,10 @@ def test_cohort_sheet_is_unambiguous():
     rows = {r.split(",")[0]: r.split(",")[1:] for r in cohorts.splitlines()
             if r.startswith(("promo_", "organic", "partner_", "paid_ads"))}
     assert rows == {
-        "promo_3_months_free": ["9800", "2050", "1280", "yes"],
-        "organic": ["1900", "1680", "1490", "no"],
-        "partner_bank": ["700", "620", "560", "no"],
-        "paid_ads": ["900", "770", "", "no"],
+        "promo_3_months_free": ["9800", "4550", "1850", "yes"],
+        "organic": ["1900", "1670", "1530", "no"],
+        "partner_bank": ["700", "620", "570", "no"],
+        "paid_ads": ["900", "790", "", "no"],
     }
     for new, aug, octo, _ in rows.values():
         assert 0 <= int(aug) <= int(new)
@@ -142,3 +142,22 @@ def test_malformed_file_is_a_clean_error(strat, case, name):
     (case / "materials" / name).write_bytes(b"not really a " + name.encode())
     r = strat("source", "add", f"materials/{name}")
     assert r.code == 1 and "could not read" in r.err
+
+
+def test_sample_data_supports_the_intended_twist():
+    """The README's story must hold in the numbers: the price rise in August moved no churn by
+    itself (promo users were not in July's base), and the promo cohort's cancellations after its
+    first charge cover the whole rise in September and October."""
+    text = convert(str(METRICS))
+    monthly = text.split("## sheet: monthly")[1].split("## sheet:")[0]
+    m = {r.split(",")[0]: (int(r.split(",")[1]), float(r.split(",")[2]))
+         for r in monthly.splitlines() if r.startswith("2026-")}
+    cohorts = text.split("## sheet: cohorts")[1].split("## sheet:")[0]
+    promo = next(r.split(",") for r in cohorts.splitlines() if r.startswith("promo_"))
+    base_rate = m["2026-07"][1]
+    assert m["2026-08"][1] <= base_rate + 0.2           # no jump in the price month
+    extra = (m["2026-08"][0] * (m["2026-09"][1] - base_rate)
+             + m["2026-09"][0] * (m["2026-10"][1] - base_rate)) / 100
+    promo_left = int(promo[2]) - int(promo[3])           # paid in August, gone by October
+    assert promo_left >= 0.9 * extra
+    assert m["2026-10"][1] / m["2026-05"][1] >= 1.6      # "почти в 1,7 раза" in the request

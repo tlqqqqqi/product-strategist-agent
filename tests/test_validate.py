@@ -236,7 +236,7 @@ def test_template_placeholder_fails(strat, ready):
 
 def test_fact_whose_quote_no_longer_matches_fails(strat, ready):
     snap = ready / "sources" / "S001.md"
-    snap.write_text(snap.read_text().replace("42300,6.8,334", "42300,7.1,334"))
+    snap.write_text(snap.read_text().replace("44790,6.8,334", "44790,7.1,334"))
     assert "claims.jsonl: C001: quote check failed" in strat("gate", "check", "1").err
 
 

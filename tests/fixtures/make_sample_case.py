@@ -24,19 +24,19 @@ def metrics_xlsx(path: Path) -> None:
         ["2026-05", 41200, 4.1, 287],
         ["2026-06", 42900, 4.0, 288],
         ["2026-07", 44100, 4.3, 289],
-        ["2026-08", 44800, 5.9, 318],
-        ["2026-09", 43600, 6.6, 331],
-        ["2026-10", 42300, 6.8, 334],
+        ["2026-08", 48300, 4.2, 318],
+        ["2026-09", 46560, 6.6, 331],
+        ["2026-10", 44790, 6.8, 334],
     ]:
         ws.append(row)
     cohorts = wb.create_sheet("cohorts")
     cohorts.append(["channel", "new_users_2026_05", "paid_users_2026_08", "paid_users_2026_10",
                     "promo"])
     for row in [
-        ["promo_3_months_free", 9800, 2050, 1280, "yes"],
-        ["organic", 1900, 1680, 1490, "no"],
-        ["partner_bank", 700, 620, 560, "no"],
-        ["paid_ads", 900, 770, None, "no"],
+        ["promo_3_months_free", 9800, 4550, 1850, "yes"],
+        ["organic", 1900, 1670, 1530, "no"],
+        ["partner_bank", 700, 620, 570, "no"],
+        ["paid_ads", 900, 790, None, "no"],
     ]:
         cohorts.append(row)
     note = wb.create_sheet("about")

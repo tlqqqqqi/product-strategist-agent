@@ -5,7 +5,7 @@ each figure it computes as one machine-readable line:
 
     INPUT materials/metrics.xlsx sha256=1a2b3c4d5e6f
     GAP cohorts!D5 (paid_users_2026_10, channel=paid_ads) is empty
-    FIGURE promo_paid_change = -770 users | period 2026-08..2026-10
+    FIGURE promo_paid_change = -2700 users | period 2026-08..2026-10
 
 Rules enforced here, not in a prompt:
 - every figure has a unit and a period in a known form (month, quarter, year, week, day, range);

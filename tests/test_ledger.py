@@ -172,8 +172,8 @@ def test_snapshot_path_outside_sources_is_refused(strat, src, case):
 def test_historical_claim_never_goes_stale(strat, case, monkeypatch):
     strat("source", "add", "materials/metrics.xlsx")
     r = strat("claim", "add", "--type", "fact", "--kind", "product_metric", "--historical",
-              "--text", "Из промо-когорты мая 2026 в августе заплатили 2050 человек",
-              "--source", "S001", "--where", "cohorts!C2", "--quote", "2050",
+              "--text", "Из промо-когорты мая 2026 в августе заплатили 4550 человек",
+              "--source", "S001", "--where", "cohorts!C2", "--quote", "4550",
               "--as-of", "2026-08", "--json")
     assert r.code == 0, r.err
     assert r.data["claim"]["historical"] is True
@@ -185,8 +185,8 @@ def test_historical_claim_never_goes_stale(strat, case, monkeypatch):
 def test_historical_claim_must_name_its_period(strat, case):
     strat("source", "add", "materials/metrics.xlsx")
     r = strat("claim", "add", "--type", "fact", "--kind", "product_metric", "--historical",
-              "--text", "Из промо-когорты в августе заплатили 2050 человек",
-              "--source", "S001", "--where", "cohorts!C2", "--quote", "2050",
+              "--text", "Из промо-когорты в августе заплатили 4550 человек",
+              "--source", "S001", "--where", "cohorts!C2", "--quote", "4550",
               "--as-of", "2026-08")
     assert r.code == 1 and "2026" in r.err
     r = strat("claim", "add", "--type", "gap", "--kind", "market", "--historical", "--text", "x")

@@ -78,8 +78,8 @@ is fixed or the problem is stated in the claim text.
    copied from the `FIGURE` line, with `--as-of` the end of the figure's period and
    `--historical` when the period is closed history. The claim text (in Russian) names the
    unit, the period and the denominator, and says when the figure rests on a column with gaps.
-   Example: "С августа по октябрь 2026 платящих из майской когорты акции стало на 770 меньше
-   (2050 -> 1280, -37,6%)".
+   Example: "С августа по октябрь 2026 платящих из майской когорты акции стало на 2700 меньше
+   (4550 -> 1850, -59,3%)".
 6. Before gate 2, and after new material arrives: `bin/strat analysis check --all`. It reruns
    every analysis script and reports conclusions whose supporting figures are one quantity at
    different scales (RUB vs thousand RUB) or the same unit over different periods (a month vs a

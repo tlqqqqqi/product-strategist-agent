@@ -57,16 +57,16 @@ def register(strat, path: str) -> str:
 
 def test_sample_case_promo_drop_is_reproduced(strat, case):
     out = run_script(case, "q1_promo_drop", PROMO_SCRIPT).read_text()
-    assert "FIGURE promo_paid_aug = 2050 users | period 2026-08" in out
-    assert "FIGURE promo_paid_oct = 1280 users | period 2026-10" in out
-    assert "FIGURE promo_paid_change = -770 users | period 2026-08..2026-10" in out
-    assert "FIGURE promo_paid_change_pct = -37.56 % | period 2026-08..2026-10" in out
+    assert "FIGURE promo_paid_aug = 4550 users | period 2026-08" in out
+    assert "FIGURE promo_paid_oct = 1850 users | period 2026-10" in out
+    assert "FIGURE promo_paid_change = -2700 users | period 2026-08..2026-10" in out
+    assert "FIGURE promo_paid_change_pct = -59.34 % | period 2026-08..2026-10" in out
 
     sid = register(strat, "analysis/q1_promo_drop.txt")
     r = strat("claim", "add", "--type", "fact", "--kind", "product_metric",
-              "--text", "Платящих из промо-когорты стало на 770 меньше с августа по октябрь 2026",
+              "--text", "Платящих из промо-когорты стало на 2700 меньше с августа по октябрь 2026",
               "--source", sid, "--where", "promo_paid_change",
-              "--quote", "promo_paid_change = -770 users", "--as-of", "2026-10", "--historical")
+              "--quote", "promo_paid_change = -2700 users", "--as-of", "2026-10", "--historical")
     assert r.code == 0, r.err
 
     r = strat("analysis", "check", sid)
