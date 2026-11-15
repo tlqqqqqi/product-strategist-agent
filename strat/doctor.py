@@ -29,11 +29,11 @@ def _conf(name: str) -> dict:
 
 
 def _chromium_installed() -> bool:
-    """Ask playwright for its chromium path in a child process (no browser start)."""
+    """Launch and close headless chromium in a child process, the way capture does (headless runs
+    on the headless-shell build, so checking the full browser's path gives false answers)."""
     code = ("from playwright.sync_api import sync_playwright\n"
-            "import os,sys\n"
             "with sync_playwright() as p:\n"
-            "    sys.exit(0 if os.path.exists(p.chromium.executable_path) else 1)\n")
+            "    p.chromium.launch().close()\n")
     try:
         return subprocess.run([sys.executable, "-c", code], capture_output=True,
                               timeout=60).returncode == 0
