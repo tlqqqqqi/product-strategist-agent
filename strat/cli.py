@@ -189,7 +189,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = _cmd(sub, "consult", "challenger call (variants|challenge), verdicts, list")
     p.add_argument("call", choices=["variants", "challenge", "verdict", "list"])
     p.add_argument("objection_id", nargs="?", default=None, help="verdict: the O id")
-    p.add_argument("verdict", nargs="?", default=None, help="verdict: accepted|rejected|open")
+    p.add_argument("verdict", nargs="?", default=None, help="verdict: accepted|rejected|open|not-chosen|risk-accepted")
     p.add_argument("--reason", default=None, help="verdict: the written reason")
     p.add_argument("--from-file", dest="from_file", default=None,
                    help="import the challenger's JSON answer (native subagent, same vendor)")

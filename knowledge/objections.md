@@ -16,6 +16,9 @@ not like it").
 - Verdict `accepted` (the option changes or falls) or `rejected` (with the reason and the claim
   that answers it). Never leave an objection without a verdict.
 - An objection you cannot answer with a claim stays open and is shown to the user at Gate 2.
+- Gate 3 refuses while a major or critical objection is open. Before it, settle each one:
+  answer it, mark it `not-chosen` when its option was not chosen at Gate 2, or ask the user
+  whether they accept the risk (`risk-accepted`, the reason quotes their words).
 
 ## Checks for the option set
 

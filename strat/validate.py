@@ -179,15 +179,35 @@ def verdict_errors(claims: list[dict]) -> list[str]:
     return errors
 
 
-def objection_errors(cdir: Path) -> list[str]:
-    return [f"objections.jsonl: {o.get('id', '?')} has no verdict"
-            for o in read_jsonl(cdir / "objections.jsonl") if not o.get("verdict")]
+def objection_errors(cdir: Path, n: int = 1) -> list[str]:
+    """Every objection has a verdict; at Gate 3 no major or critical one is still open."""
+    rows = read_jsonl(cdir / "objections.jsonl")
+    errors = [f"objections.jsonl: {o.get('id', '?')} has no verdict"
+              for o in rows if not o.get("verdict")]
+    if n >= 3:
+        errors += [f"objections.jsonl: {o['id']} [{o.get('severity')}] is open: answer it "
+                   "(accepted or rejected with a claim), mark it not-chosen if its option was "
+                   "not chosen at Gate 2, or ask the user whether they accept the risk and set "
+                   "risk-accepted with their words"
+                   for o in rows if o.get("verdict") == "open"
+                   and o.get("severity") in ("major", "critical")]
+    return errors
+
+
+def accepted_risk_errors(cdir: Path, text: str) -> list[str]:
+    """decisions.md names every objection whose risk the user accepted."""
+    return [f"decisions.md: {o['id']} is risk-accepted but not named in the decision record; "
+            "list it under \"Принятые риски\""
+            for o in read_jsonl(cdir / "objections.jsonl")
+            if o.get("verdict") == "risk-accepted" and o["id"] not in text]
 
 
 def check_file(cdir: Path, name: str) -> list[str]:
     """Checks for one file the agent just wrote (used by `strat step --out`)."""
     name = Path(name).as_posix()
     errors = heading_errors(cdir, name)
+    if name == "decisions.md" and (cdir / name).is_file():
+        errors += accepted_risk_errors(cdir, (cdir / name).read_text(encoding="utf-8"))
     if name in CHECKED:
         claims = ledger.by_id(ledger.load(cdir))
         errors += citation_errors(cdir, name, claims, ledger.shelf_life())
@@ -211,7 +231,7 @@ def gate_errors(cdir: Path, n: int) -> list[str]:
     errors += fact_errors(cdir, claims)
     if n >= 2:
         errors += verdict_errors(claims)
-    errors += objection_errors(cdir)
+    errors += objection_errors(cdir, n)
     return errors
 
 

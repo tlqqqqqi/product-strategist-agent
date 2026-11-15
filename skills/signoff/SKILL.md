@@ -8,6 +8,12 @@ description: Use at stage gate3 or monitoring. Presents the strategies for sign-
 ## Gate 3
 
 1. `bin/strat gate check 3`; fix and rerun until it passes (the stage becomes `gate3`).
+   It refuses while a major or critical objection is `open` (`bin/strat consult list`). For
+   each one: answer it if the strategy now does (`accepted` or `rejected` with a claim); mark it
+   `not-chosen` if its option was not chosen at Gate 2; otherwise show it to the user in one
+   line and ask: "Это возражение не снято. Принимаете этот риск?" Only on their yes set
+   `bin/strat consult verdict <O> risk-accepted --reason "<their words>"`; on a no, go back
+   to the strategy (`bin/strat step signoff.revise.<n> --stage strategy`).
 2. Present in Russian, short: the product direction and refusals, the key message and its
    proof, the promise check result, the expected change and when it will be measured.
 3. Ask for sign-off: "Подписываете стратегию? После подписи я запишу решение и подготовлю
@@ -26,6 +32,8 @@ description: Use at stage gate3 or monitoring. Presents the strategies for sign-
    `bin/strat review`, so keep their form:
    - `- Дата проверки: ГГГГ-ММ-ДД` - an ISO date, never "в начале весны". Ask the user for
      the date if the verification plan does not give one.
+   - `- Принятые риски:` every `risk-accepted` objection id with its text in a few words, or
+     "нет". The step fails while one is missing.
    - Under `- Условия пересмотра:` one sub-bullet per condition, citing the claim it watches,
      with `(проверить: ГГГГ-ММ-ДД)` when it has its own date. A condition fires on its date or
      when its claim is contradicted, replaced, withdrawn or stale.

@@ -30,7 +30,7 @@ CALLS = ("variants", "challenge")
 FILES = {"variants": ("brief.md", "table.md", "options.md"),
          "challenge": ("brief.md", "table.md", "options.md", "claims.md")}
 SEVERITIES = ("critical", "major", "minor")
-VERDICTS = ("accepted", "rejected", "open")
+VERDICTS = ("accepted", "rejected", "open", "not-chosen", "risk-accepted")
 STANCES = ("concede", "maintain")
 CLAIM_ID = re.compile(r"\bC\d{3,}\b")
 MAX_FILE_CHARS = 60_000
@@ -287,7 +287,8 @@ def set_verdict(cdir: Path, oid: str | None, verdict: str | None, reason: str | 
     from strat.state import log_action
 
     if not oid or not verdict:
-        raise StratError("usage: strat consult verdict <O id> accepted|rejected|open "
+        raise StratError("usage: strat consult verdict <O id> "
+                         "accepted|rejected|open|not-chosen|risk-accepted "
                          "--reason \"...\"")
     if verdict not in VERDICTS:
         raise StratError(f"verdict must be one of: {', '.join(VERDICTS)}")

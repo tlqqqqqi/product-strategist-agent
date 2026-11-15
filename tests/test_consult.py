@@ -193,6 +193,32 @@ def test_each_objection_needs_a_verdict_before_the_gate_passes(strat, challenged
     assert strat("gate", "check", "1").code == 0
 
 
+def test_gate3_refuses_an_open_major_or_critical_objection(strat, challenged):
+    """omp on DeepSeek Flash signed off with a major objection to the chosen option still open.
+    Gate 3 now refuses it until it is answered, its option was not chosen, or the user accepts
+    the risk; an accepted risk must be named in decisions.md."""
+    from strat import validate
+
+    for oid in ("O001", "O002", "O003"):
+        assert strat("consult", "verdict", oid, "open", "--reason", "Нужны данные").code == 0
+    r = strat("gate", "check", "3")
+    assert r.code == 1
+    assert all(f"{oid} [" in r.err and "is open" in r.err for oid in ("O001", "O002", "O003"))
+    assert "is open" not in strat("gate", "check", "2").err      # Gate 2 shows them instead
+    assert strat("consult", "verdict", "O001", "not-chosen", "--reason",
+                 "Руководитель выбрал вариант 2").code == 0
+    assert strat("consult", "verdict", "O002", "risk-accepted", "--reason",
+                 "Пользователь: «риск понимаю, идём дальше»").code == 0
+    assert strat("consult", "verdict", "O003", "rejected", "--reason",
+                 "Рост начался после повышения [C001]").code == 0
+    assert "is open" not in strat("gate", "check", "3").err
+    (challenged / "decisions.md").write_text("# Журнал решений\n\n- Выбранный вариант: 2\n")
+    assert any("O002" in e and "risk-accepted" in e
+               for e in validate.check_file(challenged, "decisions.md"))
+    (challenged / "decisions.md").write_text("# Журнал решений\n\n- Принятые риски: O002\n")
+    assert not any("risk-accepted" in e for e in validate.check_file(challenged, "decisions.md"))
+
+
 def test_verdict_rules(strat, challenged):
     assert strat("consult", "verdict", "O001", "rejected").code == 1          # no reason
     r = strat("consult", "verdict", "O001", "rejected", "--reason", "Не согласны")
