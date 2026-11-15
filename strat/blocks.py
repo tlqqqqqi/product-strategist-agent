@@ -13,7 +13,8 @@ A block is a fenced block whose info string is its type (`tiles`, `bars`, `line`
             | label | cell | cell [Cxxx] |      every other row cites a claim
 
 A label ending in `*` marks the focal row (drawn in the accent colour). Values may use a decimal
-comma or point and spaces between thousands; a `%` or a unit word may follow.
+comma or point and spaces between thousands; a `%` or a unit word may follow. Bars may all be
+negative (decreases, drawn by magnitude) but not mixed; funnel steps are never negative.
 
 The check (run by the gate, `strat step --out` and `strat report`): every row cites at least one
 claim that exists and is not withdrawn or stale, and every number in a row outside its label
@@ -223,9 +224,13 @@ def parse(lines: list[str], start: int) -> Block:
         block.errors.append((block.line, f"{kind} block has no title; add \"title: ...\""))
     if not block.rows and not any(e for e in block.errors if e[0] != block.line):
         block.errors.append((block.line, f"{kind} block has no rows"))
-    if kind in ("bars", "funnel") and any(v < 0 for r in block.rows for v in r.values):
-        block.errors.append((block.line, f"{kind} values must not be negative; use a line "
+    values = [v for r in block.rows for v in r.values]
+    if kind == "funnel" and any(v < 0 for v in values):
+        block.errors.append((block.line, "funnel values must not be negative; use a line "
                                          "or a table"))
+    if kind == "bars" and any(v < 0 for v in values) and any(v > 0 for v in values):
+        block.errors.append((block.line, "bars values must all have the same sign (all "
+                                         "decreases or all increases); use a table"))
     if kind == "slope" and block.columns and len(block.columns) != 2:
         block.errors.append((block.line, "slope columns: write two names, \"columns: до | после\""))
     return block

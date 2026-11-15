@@ -154,10 +154,11 @@ def test_output_has_no_external_resources(strat, memo_case):
     assert strat("report").code == 0
     html = (memo_case / "memo.html").read_text(encoding="utf-8")
     doc = parse(memo_case / "memo.html")
-    assert doc.resources == []
+    # the only outside resource is the Google Fonts stylesheet (the page reads without it)
+    assert all(r.startswith("link https://fonts.g") for r in doc.resources), doc.resources
     assert "@import" not in doc.style and "url(" not in doc.style
-    assert 'lang="ru"' in html and "prefers-color-scheme: dark" in html
-    assert 'name="viewport"' in html
+    assert 'lang="ru"' in html and 'name="viewport"' in html
+    assert "prefers-color-scheme: dark" not in html  # light only (DESIGN.md)
 
 
 def test_source_text_is_escaped(strat, memo_case):
@@ -540,3 +541,229 @@ def test_claim_type_filter_tags_elements_and_is_hidden_without_js(strat, block_c
         assert label in nav.group(1)
     assert 'data-types="assumption"' in html  # the bars cite an assumption
     assert re.search(r'data-types="[^"]*\bgap\b', html)  # the gap bullet
+
+
+# --- design (Task 17d, DESIGN.md) -------------------------------------------------------------
+
+TOKENS = {
+    "--page": "#F5F8FF", "--surface": "#FFFFFF", "--surface-2": "#F2F8FF", "--ink": "#1A1F3B",
+    "--muted": "#56627A", "--hairline": "#D3E1F2", "--accent": "#2563EB",
+    "--accent-mark": "#3B82F6", "--accent-press": "#1D4ED8", "--accent-soft": "#E3EDFF",
+    "--neg": "#C01D38", "--neg-mark": "#F4455E", "--neg-soft": "#FFE3E7",
+    "--pos": "#157A3F", "--pos-mark": "#22A55B", "--pos-soft": "#DCF5E6",
+    "--violet": "#7C5CFF", "--lavender": "#C7B8FF", "--warn": "#A8470F", "--sel": "#C7DBFF",
+}
+
+
+def css_rules(style: str) -> list[tuple[str, str]]:
+    """(selector, declarations) of every plain rule, with @media blocks flattened."""
+    style = re.sub(r"/\*.*?\*/", "", style, flags=re.S)
+    return [(sel.strip(), body) for sel, body in re.findall(r"([^{}@]+)\{([^{}]*)\}", style)]
+
+
+def style_for(style: str, cls: str) -> str:
+    """All declarations of rules whose selector ends with the class `cls`."""
+    return " ".join(body for sel, body in css_rules(style)
+                    if any(re.search(rf"\.{cls}\b[^\s]*$", s.strip()) for s in sel.split(",")))
+
+
+class Classes(HTMLParser):
+    """Every element: (tag, attrs, text inside it)."""
+
+    def __init__(self):
+        super().__init__()
+        self.els: list[list] = []
+        self._open: list[list] = []
+
+    def handle_starttag(self, tag, attrs):
+        el = [tag, dict(attrs), ""]
+        self.els.append(el)
+        if tag not in ("br", "img", "meta", "hr", "input", "link", "circle", "line", "polyline"):
+            self._open.append(el)
+
+    def handle_endtag(self, tag):
+        for i in range(len(self._open) - 1, -1, -1):
+            if self._open[i][0] == tag:
+                del self._open[i:]
+                break
+
+    def handle_data(self, data):
+        for el in self._open:
+            el[2] += data
+
+    def with_class(self, cls: str) -> list[list]:
+        return [e for e in self.els if cls in (e[1].get("class") or "").split()]
+
+
+def classes(html: str) -> Classes:
+    c = Classes()
+    c.feed(html)
+    return c
+
+
+def test_page_defines_the_design_tokens_light_only(strat, memo_case):
+    assert strat("report").code == 0
+    doc = parse(memo_case / "memo.html")
+    root = " ".join(body for sel, body in css_rules(doc.style) if sel == ":root")
+    for name, value in TOKENS.items():
+        m = re.search(rf"{re.escape(name)}\s*:\s*(#[0-9A-Fa-f]{{6}})", root)
+        assert m and m.group(1).upper() == value, f"{name} is not {value}"
+    body_font = " ".join(b for s, b in css_rules(doc.style) if s in ("html", "body"))
+    family = re.search(r"font-family\s*:\s*([^;]+)", body_font).group(1)
+    family = re.sub(r"var\((--[\w-]+)\)", lambda m: re.search(
+        rf"{m.group(1)}\s*:\s*([^;]+)", root).group(1), family)
+    assert family.lstrip().startswith('"Geologica"') and "sans-serif" in family  # system fallback
+
+
+NEG_CLAIMS = [
+    # C006
+    ["--type", "assumption", "--kind", "product_metric",
+     "--text", "Платящих акции стало на 59,34% меньше, органики — на 8,38% меньше"],
+    # C007
+    ["--type", "assumption", "--kind", "product_metric", "--text", "ARPU вырос на 45 ₽, до 334 ₽"],
+]
+
+NEG_TILES = """```tiles
+title: Главное
+- платящих акции: −59,34 % - отток здесь [C006]
+- ARPU: +45 ₽ - цена не обрушила выручку [C007]
+- ARPU в октябре: 334 ₽ - уровень [C007]
+```"""
+
+NEG_BARS = """```bars
+title: Изменение платящих, август → октябрь
+unit: %
+- Акция: −59,34 [C006]
+- Органика: -8,38 [C006]
+```"""
+
+
+@pytest.fixture
+def neg_case(memo_case, strat):
+    for args in NEG_CLAIMS:
+        r = strat("claim", "add", *args)
+        assert r.code == 0, r.err
+    return memo_case
+
+
+def test_tile_values_are_figure_rows_coloured_by_sign(strat, neg_case):
+    (neg_case / "memo.md").write_text(with_blocks(NEG_TILES), encoding="utf-8")
+    r = strat("report")
+    assert r.code == 0, r.err
+    page = classes(block_html(neg_case))
+    figs = page.with_class("fig")
+    assert len(figs) == 3
+    values = page.with_class("fig-v")
+    assert [("neg" in v[1]["class"].split(), "pos" in v[1]["class"].split()) for v in values] \
+        == [(True, False), (False, True), (False, False)]
+    assert "59,34" in values[0][2] and "45" in values[1][2]
+    first = figs[0][2]
+    assert "платящих акции" in first and "отток здесь" in first and "C006" in first
+    notes = page.with_class("fig-n")
+    assert [n[2] for n in notes][0] == "отток здесь"
+
+
+def test_bars_draw_the_focal_bar_violet_and_negative_values_in_neg(strat, neg_case):
+    (neg_case / "memo.md").write_text(with_blocks(NEG_BARS), encoding="utf-8")
+    r = strat("report")
+    assert r.code == 0, r.err
+    page = classes(block_html(neg_case))
+    fills = page.with_class("blk-bar")
+    assert [f[1]["class"].split()[-1] for f in fills] == ["violet", "lavender"]
+    widths = [float(re.search(r"width:([\d.]+)%", f[1]["style"]).group(1)) for f in fills]
+    assert widths[0] == 100 and 0 < widths[1] < 20  # by magnitude
+    vals = page.with_class("blk-v")
+    assert all("neg" in v[1]["class"].split() for v in vals)
+    doc = parse(neg_case / "memo.html")
+    assert "var(--violet)" in style_for(doc.style, "violet")
+    assert "var(--lavender)" in style_for(doc.style, "lavender")
+    assert "var(--neg)" in style_for(doc.style, "neg")
+
+
+def test_bars_with_mixed_signs_fail(strat, neg_case):
+    memo = with_blocks(NEG_BARS.replace("-8,38", "8,38"))
+    (neg_case / "memo.md").write_text(memo, encoding="utf-8")
+    r = strat("report")
+    assert r.code == 1 and "same sign" in r.err
+
+
+def claims_data(html: str) -> dict:
+    m = re.search(r'<script id="claims-data" type="application/json">(.*?)</script>', html, re.S)
+    assert m, "no claims data for the claim card"
+    return json.loads(m.group(1))
+
+
+def test_each_citation_carries_the_data_for_its_claim_card(strat, memo_case):
+    assert strat("report").code == 0
+    html = (memo_case / "memo.html").read_text(encoding="utf-8")
+    data = claims_data(html)
+    page = classes(html.split('id="claims"')[0])
+    cites = page.with_class("cite")
+    assert cites
+    for el in cites:
+        cid = el[1]["data-c"]
+        assert el[1]["href"] == f"#{cid}"  # without JS: a link to the card on the page
+        claim = data["claims"][cid]
+        assert claim["type"] and claim["text"]
+    fact = data["claims"]["C001"]
+    assert fact["type"] == "fact" and fact["quote"] == PRICE and fact["where"] == "Семейный"
+    src = data["sources"][fact["source"]]
+    assert src["title"] == "ОблакоПлюс — тарифы"
+    assert src["href"] == "materials/competitor.html"
+    assert src["snap"].startswith("sources/")
+    # gap and assumption citations are told apart from facts on the chip itself
+    gap = next(e for e in cites if e[1]["data-c"] == "C003")
+    assert "as" in gap[1]["class"].split()
+
+
+def test_gap_claim_card_says_there_is_no_data(strat, memo_case):
+    assert strat("report").code == 0
+    html = (memo_case / "memo.html").read_text(encoding="utf-8")
+    doc = parse(memo_case / "memo.html")
+    assert "Данных нет" in doc.text_by_id["C003"]  # the no-JS card on the page
+    assert "Данных нет" in claims_data(html)["claims"]["C003"]["note"]  # the popover
+
+
+def test_output_has_no_file_urls_or_absolute_paths(strat, memo_case):
+    index = memo_case / "sources" / "index.jsonl"
+    rows = [json.loads(t) for t in index.read_text(encoding="utf-8").splitlines() if t.strip()]
+    rows[0]["origin"] = str(memo_case / "materials" / "competitor.html")
+    rows[0]["snapshot"] = "file:///etc/passwd"
+    index.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows),
+                     encoding="utf-8")
+    assert strat("report").code == 0
+    html = (memo_case / "memo.html").read_text(encoding="utf-8")
+    assert "file://" not in html
+    assert str(memo_case) not in html and str(memo_case.parent) not in html
+    doc = parse(memo_case / "memo.html")
+    assert not [h for h in doc.hrefs if h.startswith(("/", "\\"))]
+    assert claims_data(html)["sources"]["S001"]["href"] is None
+
+
+def test_header_shows_the_decision_and_the_metadata(strat, memo_case):
+    memo = MEMO.replace("## Как проверим", "## Как проверим\n\n- Дата проверки: 2027-02-01 [C004]")
+    memo = memo.replace("## Материалы", "## Риски и открытые вопросы\n\n"
+                        "- Покупатели могут уйти к конкуренту [C003]\n"
+                        "- Цены могут вырасти [C001]\n\n## Материалы")
+    (memo_case / "memo.md").write_text(memo, encoding="utf-8")
+    (memo_case / "objections.jsonl").write_text(json.dumps(
+        {"id": "O007", "call": "challenge", "target": "x", "severity": "major", "text": "y",
+         "claims": ["C003"], "verdict": "risk-accepted", "reason": "z"}, ensure_ascii=False)
+        + "\n", encoding="utf-8")
+    r = strat("report")
+    assert r.code == 0, r.err
+    html = (memo_case / "memo.html").read_text(encoding="utf-8")
+    page = classes(html.split('id="claims"')[0])
+    head = page.with_class("memo-head")[0][2]
+    assert "Цену не откатываем" in head and "Записка:" not in head
+    box = page.with_class("decision-box")[0][2]
+    assert box.startswith("Решение.") and "через тест" in box and "C001" in box
+    assert not [e for e in page.els if e[0] == "h2" and e[2].strip() == "Решение"]
+    meta = re.sub(r"\s+", " ", page.with_class("meta")[0][2])
+    assert "Проверка: 2027-02-01" in meta
+    assert "Факты: 1" in meta and "Допущения: 1" in meta and "Принятые риски: 1" in meta
+    risks = page.with_class("risk")
+    assert len(risks) == 2
+    tags = [e[2] for e in page.with_class("risk-id")]
+    assert tags == ["O007"]
+    assert "уйти к конкуренту" in risks[0][2]
