@@ -72,7 +72,9 @@ answer a research question.
      question N (exit 2) is resumed by running the same command again.
    - The session goes to `interviews/persona_<name>.md`; it starts with the banner «ВНИМАНИЕ:
      это имитация респондента языковой моделью ..., а не ответы реального человека».
-3. No peer key (exit 3): run the native subagent from `agents/persona.md` with a fresh context.
+3. No peer key (exit 3): run the native subagent from `agents/persona.md` with a fresh context
+   (in Claude Code after `bin/strat setup --sync`, `.claude/agents/persona.md` exists: use the
+   `persona` subagent directly).
    Give it the persona file, the guide and the output path; it writes the same `## Q<n>`
    blocks. Then import:
    `bin/strat interview add <file> --persona mama --step interview.persona.mama`

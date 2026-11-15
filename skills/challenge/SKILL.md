@@ -24,6 +24,9 @@ Exit 3 means there is no peer key, or the call failed. Then run the challenger y
 native subagent with a fresh context (in Claude Code: the Task tool with a general-purpose
 agent):
 
+In Claude Code after `bin/strat setup --sync` (`.claude/agents/challenger.md` exists) use the
+`challenger` subagent directly; otherwise a general-purpose subagent with the file below.
+
 1. Give it `agents/challenger.md`, the task text the command printed and the file paths it
    listed. Nothing from this conversation.
 2. Save its final JSON answer to `cases/<case>/challenger-<call>.json`.
