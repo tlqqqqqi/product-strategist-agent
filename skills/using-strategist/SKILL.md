@@ -60,8 +60,11 @@ Read the skill file before you act on a stage. Method knowledge is in `knowledge
    See `knowledge/claims.md`.
 3. **Gates are the user's.** At a gate you present, then stop and wait. Run
    `bin/strat gate approve <n>` only after the user has said yes to that gate in this chat. A
-   question, a correction or silence is not a yes. Between gates you prepare and decide nothing
-   on the user's behalf.
+   question, a correction, «Продолжай» or silence is not a yes. Present a gate only after
+   `bin/strat gate check <n>` passes. The harness records the user's messages, and the CLI
+   refuses an approval without a yes sent after the check passed. Never edit `claims.jsonl`,
+   `objections.jsonl`, `state.json`, `log.jsonl` or `sources/` by hand or with a script: the
+   gate check detects it. Between gates you prepare and decide nothing on the user's behalf.
 4. **Checks are scripts.** Before presenting a gate run `bin/strat gate check <n>` and fix every
    line it reports. Never present a gate that does not pass.
 5. **Log your own actions.** After you write a case file, run

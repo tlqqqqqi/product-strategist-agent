@@ -391,6 +391,10 @@ def gate_check(n: int, case: str | None = None, as_json: bool = False) -> int:
         return FAILED
     state = load_state(cdir)
     if state["gates"][str(n)] != "approved":
+        if state["stage"] != f"gate{n}" or str(n) not in state.get("ready_at", {}):
+            import time
+
+            state.setdefault("ready_at", {})[str(n)] = time.time()  # the user answers after this
         state["stage"] = f"gate{n}"
         save_state(cdir, state)
     flagged = [s["id"] for s in sources.index(cdir) if s.get("flags")]

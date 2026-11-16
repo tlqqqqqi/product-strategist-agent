@@ -56,8 +56,10 @@ bin/strat consult verdict O003 open --reason "Решат данные о ког�
 - `not-chosen` (after Gate 2 only): the option it targets was not chosen; the reason names the
   chosen option. Refused for an objection to the chosen option number, even if you renamed or
   merged it: answer that one or ask the user.
-- `risk-accepted`: the user said in this chat that they accept the risk; the reason quotes
-  their words. Never set it on your own.
+- `risk-accepted`: the user said in this chat that they accept this risk; the reason quotes
+  their words as «...». Ask about each open risk in its own question before you present Gate 3;
+  a sign-off («Подписываю») is not an answer to a risk. Never set it on your own: the CLI
+  checks the quote against the user's real messages.
 
 Copy each objection with its verdict into "Возражения" in `options.md`, citing claims as usual.
 

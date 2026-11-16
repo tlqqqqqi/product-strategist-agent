@@ -119,6 +119,13 @@ def checks() -> list[dict]:
         ".agents/skills does not resolve to skills/ (on Windows clone with "
         "git config core.symlinks true)")
 
+    hooks = [h for h, f in (("Claude Code", base / "hooks" / "user-prompt"),
+                            ("OpenCode", base / ".opencode" / "plugins" / "strat-inbox.js"))
+             if f.is_file()]
+    add("user's words at gates", bool(hooks),
+        f"inbox hook for {', '.join(hooks)}: gate approvals need the user's yes" if hooks else
+        "no inbox hook; gate approvals are not checked against the user's words")
+
     sub = (base / ".claude" / "agents" / "challenger.md").is_file()
     add("claude code subagents", sub,
         ".claude/agents/challenger.md present" if sub else

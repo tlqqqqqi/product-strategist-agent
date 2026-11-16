@@ -223,6 +223,7 @@ def gate_approve(n: int, option: int | None = None, case: str | None = None,
         raise StratError(f"stage is {state['stage']}, not gate{n}: run `strat gate check {n}` "
                          "first and present the gate to the user")
     _recheck_gate(cdir, n)
+    said = _users_yes(state, n)
     state["gates"][str(n)] = "approved"
     if n == 2:
         state["chosen_option"] = option
@@ -230,13 +231,32 @@ def gate_approve(n: int, option: int | None = None, case: str | None = None,
     state["next"] = NEXT_AFTER_GATE[n]
     save(cdir, state)
     log_action(cdir, step=f"gate{n}.approve", tool="gate", stage=f"gate{n}",
-               note="approved by the user")
+               note="approved by the user" + (f": «{said}»" if said else " (no inbox hook)"))
     emit(f"gate {n} approved; stage: {state['stage']}; next: {state['next']}",
          {"gate": n, "stage": state["stage"], "next": state["next"]}, as_json)
     return 0
 
 
 # --- rules ------------------------------------------------------------------------------------
+
+def _users_yes(state: dict, n: int) -> str | None:
+    """With the harness's inbox hook: the user's latest message after the gate became ready must
+    be a yes. Returns the user's words, or None when the harness has no inbox."""
+    from strat import inbox
+
+    if not inbox.available():
+        return None
+    after = inbox.since(state.get("ready_at", {}).get(str(n)))
+    if not after:
+        raise StratError(f"the user has not answered since gate {n} became ready: present gate "
+                         f"{n}, stop, and wait for the user's reply")
+    words = after[-1]["text"].strip()
+    if not inbox.is_yes(words):
+        raise StratError(f"the user's last message «{words[:200]}» is not a yes to gate {n}. "
+                         "Do not approve: answer it, present the gate again if needed, and wait "
+                         "for an explicit yes")
+    return words[:300]
+
 
 def _check_intake_answered(cdir: Path) -> None:
     """Questions asked at intake must be answered by the user before the plan starts."""

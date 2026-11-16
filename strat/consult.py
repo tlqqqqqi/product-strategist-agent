@@ -298,6 +298,12 @@ def set_verdict(cdir: Path, oid: str | None, verdict: str | None, reason: str | 
     o = _find(rows, oid)
     if verdict == "not-chosen":
         _check_not_chosen(cdir, o)
+    if verdict == "risk-accepted":
+        from strat import inbox
+
+        if inbox.available() and not inbox.quoted_by_user(reason):
+            raise StratError("risk-accepted needs the user's own words: ask the user whether they "
+                             "accept this risk, then quote their reply in the reason as «...»")
     cited = CLAIM_ID.findall(reason)
     if verdict == "rejected":
         if not cited:

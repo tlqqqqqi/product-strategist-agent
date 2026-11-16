@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+"""User-prompt hook: append the user's message to cases/.inbox.jsonl.
+
+Claude Code runs it on UserPromptSubmit and passes {"prompt": ...} on stdin. The CLI reads the
+inbox to check that a gate approval follows the user's yes (strat/inbox.py). Standard library
+only; never blocks or fails the user's message.
+"""
+
+import json
+import os
+import sys
+import time
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def main() -> None:
+    try:
+        data = json.load(sys.stdin)
+        text = data.get("prompt") if isinstance(data, dict) else None
+        if not isinstance(text, str) or not text.strip():
+            return
+        cases = Path(os.environ.get("STRAT_CASES") or ROOT / "cases")
+        cases.mkdir(parents=True, exist_ok=True)
+        row = {"t": time.time(), "text": text, "harness": "claude-code"}
+        with (cases / ".inbox.jsonl").open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+    except Exception:  # the hook must never break the session
+        pass
+
+
+if __name__ == "__main__":
+    main()
