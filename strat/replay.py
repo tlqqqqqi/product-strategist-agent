@@ -232,7 +232,12 @@ def category(item: dict) -> str | None:
     return CATEGORY.get(tool, "other")
 
 
-def summarize(items: list[dict]) -> str:
+PROVIDER = {"brave": "Brave", "exa": "Exa", "tavily": "Tavily"}
+
+
+def summarize(items: list[dict], web: dict | None = None) -> str:
+    """Russian summary of a step group. `web` (from the case log) replaces the command count of
+    searches and pages with what was really done: a shell loop may run several searches."""
     counts: Counter = Counter()
     for it in items:
         cat = category(it)
@@ -240,7 +245,64 @@ def summarize(items: list[dict]) -> str:
             counts[cat] += 1
         if it.get("ok") is False:
             counts["fail"] += 1
-    return summarize_counts(counts)
+    if web:
+        counts["net"], counts["web"] = web["searches"], web["pages"]
+    text = summarize_counts(counts)
+    if web and web["searches"]:
+        names = ", ".join(PROVIDER.get(p, p) for p in web["providers"])
+        n = web["results"]
+        head = f"искал в интернете {web['searches']} {plural(web['searches'], 'раз', 'раза', 'раз')}"
+        extra = f" ({names}; {n} {plural(n, 'результат', 'результата', 'результатов')})"
+        text = re.sub(re.escape(head), lambda m: m.group(0) + extra, text, count=1, flags=re.I)
+    return text
+
+
+RESULTS = re.compile(r"^(\w+), (\d+) results")
+
+
+def web_activity(cdir: Path) -> list[dict]:
+    """Searches that answered and web pages saved, from the case log, with their times."""
+    out = []
+    for row in _jsonl(cdir / "log.jsonl"):
+        if row.get("status") != "ok" or not row.get("ts"):
+            continue
+        if row.get("tool") == "search" and (m := RESULTS.match(row.get("note") or "")):
+            out.append({"ts": row["ts"], "kind": "search", "provider": m.group(1),
+                        "results": int(m.group(2))})
+        elif row.get("tool") == "read" and str(row.get("in", "")).startswith(("http://", "https://")):
+            out.append({"ts": row["ts"], "kind": "page"})
+    return out
+
+
+def attach_web(run: dict, cdir: Path) -> None:
+    """Count, per step group and per run, the searches made, the provider that answered, the
+    results returned and the pages saved, as the case log recorded them. A row belongs to the
+    last step group that started before it."""
+    acts = web_activity(cdir)
+    start = run["meta"].get("start")
+    groups = [e for e in run["events"] if e["kind"] == "steps"]
+    total = {"searches": 0, "results": 0, "pages": 0, "providers": []}
+    if not acts or not start or not groups:
+        return
+    t0 = datetime.fromisoformat(start)
+    for a in acts:
+        rel = (datetime.fromisoformat(a["ts"]) - t0).total_seconds()
+        g = next((g for g in reversed(groups) if g["t"] <= rel + 2), None)
+        if g is None:
+            continue
+        w = g.setdefault("web", {"searches": 0, "results": 0, "pages": 0, "providers": []})
+        for box in (w, total):
+            if a["kind"] == "search":
+                box["searches"] += 1
+                box["results"] += a["results"]
+                if a["provider"] not in box["providers"]:
+                    box["providers"].append(a["provider"])
+            else:
+                box["pages"] += 1
+    for g in groups:
+        if "web" in g:
+            g["summary"] = summarize(g["items"], g["web"])
+    run["meta"]["web"] = total
 
 
 def group_steps(flat: list[dict]) -> list[dict]:
@@ -596,6 +658,27 @@ def _oc_cwd(rows: list[dict]) -> str | None:
     return found.most_common(1)[0][0] if found else None
 
 
+IDLE_GAP = 15 * 60  # longer silence inside a turn: the machine slept or the run was paused
+
+
+def active_minutes(logs: dict[str, list[dict]], secs: dict[str, float]) -> float | None:
+    """Working time. Each turn counts its measured wall time (times.txt) or, without it, the span
+    of its events; silences longer than IDLE_GAP inside the turn, or after its last event, are
+    left out (a run that slept 90 minutes must not show 90 minutes of work)."""
+    total = 0.0
+    for n, rows in logs.items():
+        ts = sorted(d["timestamp"] / 1000 for d in rows if d.get("timestamp") is not None)
+        if not ts:
+            total += secs.get(n, 0.0)
+            continue
+        span = ts[-1] - ts[0]
+        idle = sum(b - a for a, b in zip(ts, ts[1:]) if b - a > IDLE_GAP)
+        wall = secs.get(n, span)
+        tail = wall - span
+        total += wall - idle - (tail if tail > IDLE_GAP else 0)
+    return round(total / 60, 1) if total else None
+
+
 def build_opencode(folder: Path, label: str | None = None, run_id: str | None = None,
                    model: str | None = None, case: str | None = None) -> dict:
     """One run from a folder of OpenCode `run --format json` turn logs."""
@@ -660,7 +743,7 @@ def build_opencode(folder: Path, label: str | None = None, run_id: str | None = 
                 err = d.get("error") or {}
                 rec.error(str((err.get("data") or {}).get("message") or err.get("name") or
                               "ошибка"), ts, sid, cwd)
-    minutes = round(sum(secs.values()) / 60, 1) if secs else None
+    minutes = active_minutes(logs, secs)
     run = rec.finish(prices_known=cost > 0, minutes=minutes)
     return _run(run, run_id, label, model or "", "opencode", case, tokens)
 
@@ -825,6 +908,7 @@ def export(case: str | None = None, transcripts: str | None = None, out: str | N
     cdir = Path(case_dir) if case_dir else find_case_dir(run_folder, run["case"])
     if cdir:
         run.update(case_evidence(cdir, run["materials"]))
+        attach_web(run, cdir)
     target = Path(out) if out else root() / "demo" / "replay" / "script.json"
     bundle = put_run(load_bundle(target), run)
     embedded = write_bundle(target, bundle)

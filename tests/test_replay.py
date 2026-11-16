@@ -279,8 +279,12 @@ def test_committed_demo_bundle_is_version_2_and_clean():
     from strat import replay
 
     bundle = json.loads((REPO / "demo" / "replay" / "script.json").read_text(encoding="utf-8"))
-    assert bundle["version"] == 2 and bundle["runs"][0]["id"] == "sample-opus"
-    assert bundle["runs"][0]["label"].startswith("Пример: кейс «Семейное облако»")
+    ids = [r["id"] for r in bundle["runs"]]
+    assert bundle["version"] == 2 and ids[0] == "gpt-6.1-terra" and "sample-opus" in ids
+    labels = {r["id"]: r["label"] for r in bundle["runs"]}
+    assert labels["gpt-6.1-terra"].startswith("Демо-кейс «Семейный компас»")
+    assert labels["sample-opus"].startswith("Учебный кейс «Семейное облако»")
+    assert all(r["meta"].get("web") is not None for r in bundle["runs"] if r["harness"] == "opencode")
     assert not replay.leaked(bundle)
     html = PAGE.read_text(encoding="utf-8")
     block = re.search(r'<script id="replay-data" type="application/json">(.*?)</script>', html,
@@ -752,3 +756,52 @@ def test_a_loose_numbered_list_with_indented_lines_stays_one_list(tmp_path):
 def test_a_list_split_by_a_paragraph_keeps_its_numbers(tmp_path):
     lists, _ = _play_bundle(tmp_path, "1. один\n2. два\n\nПояснение.\n\n3. три")
     assert lists == [[1, 2], [3, 1]]
+
+
+def test_web_counts_come_from_the_case_log_by_time(tmp_path):
+    """A shell loop ran 3 searches in one command; the summary and the run count all 3, with the
+    provider that answered and the results returned."""
+    from strat.replay import attach_web
+
+    cdir = tmp_path / "case"
+    cdir.mkdir()
+    rows = [
+        {"step": "research.q1.search.1", "ts": "2026-11-16T10:00:20+03:00", "tool": "search",
+         "status": "ok", "note": "brave, 10 results"},
+        {"step": "research.q1.search.2", "ts": "2026-11-16T10:00:21+03:00", "tool": "search",
+         "status": "ok", "note": "exa, 8 results"},
+        {"step": "research.q1.search.3", "ts": "2026-11-16T10:00:22+03:00", "tool": "search",
+         "status": "error", "note": "tavily: 500"},
+        {"step": "research.q1.read.1", "ts": "2026-11-16T10:00:40+03:00", "tool": "read",
+         "status": "ok", "in": "https://example.org/a"},
+        {"step": "research.q2.search.1", "ts": "2026-11-16T10:05:00+03:00", "tool": "search",
+         "status": "ok", "note": "brave, 5 results"},
+    ]
+    (cdir / "log.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    loop = {"tool": "Bash", "line": 'for q in a b c; do bin/strat search "$q"; done', "t": 15}
+    run = {"meta": {"start": "2026-11-16T07:00:00+00:00"}, "events": [
+        {"kind": "steps", "t": 15, "items": [loop], "summary": ""},
+        {"kind": "agent", "t": 60, "text": "..."},
+        {"kind": "steps", "t": 290, "items": [{"tool": "Bash", "line": "bin/strat search x", "t": 290}],
+         "summary": ""},
+    ]}
+    attach_web(run, cdir)
+    g1, g2 = run["events"][0], run["events"][2]
+    assert g1["summary"] == ("Искал в интернете 2 раза (Brave, Exa; 18 результатов), "
+                             "открыл 1 страницу")
+    assert g2["summary"] == "Искал в интернете 1 раз (Brave; 5 результатов)"
+    assert run["meta"]["web"] == {"searches": 3, "results": 23, "pages": 1,
+                                  "providers": ["brave", "exa"]}
+
+
+def test_active_minutes_leave_out_sleep_and_pauses():
+    """A turn that ran 2 min, slept 90 min, worked 1 more min and then hung until the timeout."""
+    from strat.replay import active_minutes
+
+    ms = 60_000
+    logs = {"1": [{"timestamp": 0}, {"timestamp": 2 * ms}, {"timestamp": 92 * ms},
+                  {"timestamp": 93 * ms}]}
+    assert active_minutes(logs, {"1": 93 * 60.0}) == 3.0
+    assert active_minutes(logs, {"1": 140 * 60.0}) == 3.0          # idle tail after the last event
+    assert active_minutes(logs, {"1": 95 * 60.0}) == 5.0           # a short tail is thinking time
+    assert active_minutes({"1": [{"timestamp": 0}, {"timestamp": 3 * ms}]}, {}) == 3.0
