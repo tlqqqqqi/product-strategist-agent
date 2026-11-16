@@ -6,7 +6,7 @@ import json
 import pytest
 
 from strat import models, net
-from strat.core import read_json, read_jsonl
+from strat.core import read_json, read_jsonl, write_json
 from test_validate import ready, research  # noqa: F401  (ready: a case whose Gate 1 files and claims pass)
 
 KEYS = ("STRAT_PEER_API_KEY", "STRAT_PEER_BASE_URL", "STRAT_PEER_MODEL")
@@ -206,7 +206,7 @@ def test_gate3_refuses_an_open_major_or_critical_objection(strat, challenged):
     assert all(f"{oid} [" in r.err and "is open" in r.err for oid in ("O001", "O002", "O003"))
     assert "is open" not in strat("gate", "check", "2").err      # Gate 2 shows them instead
     st = challenged / "state.json"
-    st.write_text(json.dumps({**json.loads(st.read_text()), "chosen_option": 2}))
+    write_json(st, {**json.loads(st.read_text()), "chosen_option": 2})  # as gate approve 2
     assert strat("consult", "verdict", "O001", "not-chosen", "--reason",
                  "Руководитель выбрал вариант 2").code == 0
     assert strat("consult", "verdict", "O002", "risk-accepted", "--reason",
@@ -234,7 +234,7 @@ def test_not_chosen_needs_the_gate2_choice_and_refuses_the_chosen_option(strat, 
     st = challenged / "state.json"
     state = _json.loads(st.read_text())
     state["chosen_option"] = 1                                    # as `gate approve 2 --option 1`
-    st.write_text(_json.dumps(state))
+    write_json(st, state)
     r = strat("consult", "verdict", "O002", "not-chosen", "--reason", "Вариант без действий отклонён")
     assert r.code == 1 and "chosen" in r.err                      # O002 targets Вариант 1
     assert strat("consult", "verdict", "O001", "not-chosen", "--reason",
@@ -249,6 +249,8 @@ def test_gate2_approval_records_the_chosen_option(strat, ready):
     assert strat("gate", "check", "2").code == 0
     r = strat("gate", "approve", "2")
     assert r.code == 1 and "--option" in r.err
+    r = strat("gate", "approve", "2", "--option", "99")   # review: any number made every
+    assert r.code == 1 and "Вариант 99" in r.err            # objection closable as not-chosen
     assert strat("gate", "approve", "2", "--option", "3").code == 0
     assert read_json(ready / "state.json")["chosen_option"] == 3
 
@@ -382,3 +384,38 @@ def test_debate_without_peer_key_exits_3_and_imports_a_file(strat, challenged, p
     assert strat("debate", "O001", "--from-file", str(f)).code == 0
     entry = objections(challenged)[0]["debate"][0]
     assert entry["by"] == "same-vendor" and entry["stance"] == "concede"
+
+
+def test_not_chosen_needs_an_option_target(strat, ready):
+    """Review: an objection to the strategy as a whole could be closed as not-chosen."""
+    from strat.core import write_json, write_jsonl
+
+    write_jsonl(ready / "objections.jsonl", [
+        {"id": "O001", "call": "challenge", "target": "Стратегия в целом", "severity": "major",
+         "text": "Нет плана проверки", "by": "test"}])
+    write_json(ready / "state.json", {**read_json(ready / "state.json"), "chosen_option": 2})
+    r = strat("consult", "verdict", "O001", "not-chosen", "--reason", "Выбран вариант 2")
+    assert r.code == 1 and "does not target an option" in r.err
+
+
+def test_a_reopened_gate2_records_the_new_choice(strat, ready, cases):
+    """The user changes their mind after Gate 2: revise reopens research, Gate 2 is passed again
+    with the user's new yes, and the new option is recorded (the old approval was replayed)."""
+    from test_inbox import said
+
+    to_gate2_approved = [("gate", "check", "1"), ("gate", "approve", "1"),
+                         ("judge", "support", "--claim", "C001", "--answer", "yes")]
+    for args in to_gate2_approved:
+        assert strat(*args).code == 0
+    research(strat, ready)
+    assert strat("gate", "check", "2").code == 0
+    assert strat("gate", "approve", "2", "--option", "3").code == 0
+    assert strat("step", "revise.1.reopen", "--stage", "research").code == 0
+    st = read_json(ready / "state.json")
+    assert st["gates"]["2"] == "pending" and "chosen_option" not in st
+    assert strat("gate", "check", "2").code == 0
+    said(cases, "Передумал: да, выбираю вариант 2")
+    assert strat("gate", "approve", "2", "--option", "2").code == 0
+    st = read_json(ready / "state.json")
+    assert st["chosen_option"] == 2 and st["gates"]["2"] == "approved"
+    assert st["stage"] == "strategy"

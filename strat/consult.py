@@ -301,7 +301,12 @@ def set_verdict(cdir: Path, oid: str | None, verdict: str | None, reason: str | 
     if verdict == "risk-accepted":
         from strat import inbox
 
-        if inbox.available() and not inbox.quoted_by_user(reason):
+        raised = None
+        if o.get("at"):
+            from datetime import datetime
+
+            raised = datetime.fromisoformat(o["at"]).timestamp()
+        if inbox.available() and not inbox.quoted_by_user(reason, raised):
             raise StratError("risk-accepted needs the user's own words: ask the user whether they "
                              "accept this risk, then quote their reply in the reason as «...»")
     cited = CLAIM_ID.findall(reason)
@@ -333,7 +338,11 @@ def _check_not_chosen(cdir: Path, o: dict) -> None:
         raise StratError("not-chosen needs the user's choice recorded at Gate 2 "
                          "(`bin/strat gate approve 2 --option N`)")
     m = re.match(r"\s*Вариант\s+(\d+)\b", str(o.get("target", "")), re.IGNORECASE)
-    if m and int(m.group(1)) == chosen:
+    if not m:
+        raise StratError(f"{o['id']} does not target an option (\"Вариант N\"), so not-chosen does "
+                         "not apply: answer it (accepted or rejected with a claim) or ask the user "
+                         "to accept the risk")
+    if int(m.group(1)) == chosen:
         raise StratError(f"{o['id']} targets option {chosen}, the chosen one: answer it "
                          "(accepted or rejected with a claim) or ask the user to accept the risk")
 

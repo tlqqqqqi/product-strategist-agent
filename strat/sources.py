@@ -17,6 +17,7 @@ from pathlib import Path
 
 from strat import convert as conv
 from strat.core import (
+    check_seal,
     next_number,
     seal,
     StratError,
@@ -239,6 +240,7 @@ def register(cdir: Path, *, kind: str, origin: str, title: str, text: str, diges
     if (cdir / snapshot).exists():
         raise StratError(f"{snapshot} exists but is not in sources/index.jsonl; the case was "
                          "edited outside bin/strat")
+    check_seal(cdir / "sources" / "index.jsonl")
     (cdir / snapshot).write_text(text, encoding="utf-8")
     seal(cdir / snapshot)
     entry = {"id": sid, "kind": kind, "origin": origin, "title": title, "fetched": now(),

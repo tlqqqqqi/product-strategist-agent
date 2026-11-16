@@ -14,7 +14,7 @@ import re
 import sys
 from pathlib import Path
 
-from strat import blocks, ledger, sources
+from strat import blocks, inbox, ledger, sources
 from strat.core import FAILED, StratError, case_path, emit, read_jsonl, root
 from strat.state import load as load_state
 from strat.state import save as save_state
@@ -333,8 +333,15 @@ def seal_errors(cdir: Path) -> list[str]:
     spath = cdir / SEAL
     if not spath.is_file():
         return [f"{SEAL}: missing; the case record was edited outside bin/strat"]
-    errors = []
-    for rel, digest in sorted(json.loads(spath.read_text(encoding="utf-8")).items()):
+    from strat.core import SEALED_NAMES
+
+    sealed = json.loads(spath.read_text(encoding="utf-8"))
+    present = [p.relative_to(cdir).as_posix() for p in (*cdir.glob("*"), *cdir.glob("sources/*"))
+               if p.is_file() and (p.name in SEALED_NAMES
+                                   or re.fullmatch(r"sources/S\d{3,}\.md", p.relative_to(cdir).as_posix()))]
+    errors = [f"{rel}: not in the seal; the case record was edited outside bin/strat"
+              for rel in sorted(set(present) - set(sealed))]
+    for rel, digest in sorted(sealed.items()):
         path = cdir / rel
         if not path.is_file() or sha256_of(path) != digest:
             errors.append(f"{rel}: changed outside bin/strat (a hand edit or a script). Undo it: "
@@ -396,6 +403,8 @@ def gate_check(n: int, case: str | None = None, as_json: bool = False) -> int:
 
             state.setdefault("ready_at", {})[str(n)] = time.time()  # the user answers after this
         state["stage"] = f"gate{n}"
+        if inbox.available():
+            state["inbox"] = True  # from now on a missing inbox is an error, not "no hook"
         save_state(cdir, state)
     flagged = [s["id"] for s in sources.index(cdir) if s.get("flags")]
     notes = "".join(f"\nnote: {sid} contains text addressed to AI; mention it to the user"

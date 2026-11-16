@@ -694,6 +694,7 @@ def test_redact_hides_the_local_user_name_and_export_refuses_it(monkeypatch):
     out = replay.redact("-rw-r--r--  1 alicebob  wheel  7003 Nov 15 metrics.xlsx; alicebobby")
     assert out == "-rw-r--r--  1 [скрыто]  wheel  7003 Nov 15 metrics.xlsx; alicebobby"
     assert replay.leaked({"x": "drwxr-xr-x 5 alicebob staff"}) == ["alicebob"]
+    assert replay.redact("by Alicebob") == "by [скрыто]"   # review: the name in another case
 
 
 def test_redact_keeps_long_snake_case_metric_names():

@@ -29,6 +29,12 @@
       "Read(cases/**)",
       "Edit(cases/**)",
       "Write(cases/**)"
+    ],
+    "deny": [
+      "Edit(cases/.inbox.jsonl)",
+      "Write(cases/.inbox.jsonl)",
+      "Edit(cases/**/.seal.json)",
+      "Write(cases/**/.seal.json)"
     ]
   }
 }

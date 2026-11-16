@@ -452,6 +452,34 @@ def test_a_rewritten_snapshot_and_a_forged_log_line_fail(strat, ready):
     assert "log.jsonl: changed outside" in r.err
 
 
+def test_a_cli_write_does_not_reseal_a_hand_edit(strat, ready):
+    """Review: the next CLI append re-hashed log.jsonl with a forged row inside and the gate passed."""
+    with (ready / "log.jsonl").open("a") as f:
+        f.write(json.dumps({"step": "research.q2.search.9", "tool": "search", "status": "ok"}) + "\n")
+    r = strat("step", "plan.note", "--note", "x")
+    assert r.code == 1 and "log.jsonl: changed outside bin/strat" in r.err
+    r = strat("gate", "check", "1")
+    assert r.code == 1 and "log.jsonl: changed outside" in r.err
+    p = ready / "claims.jsonl"
+    p.write_text(p.read_text().replace('"status": "active"', '"status": "active" ', 1))
+    r = strat("claim", "add", "--type", "gap", "--kind", "market", "--text", "Пробел")
+    assert r.code == 1 and "claims.jsonl: changed outside bin/strat" in r.err
+
+
+def test_a_record_file_missing_from_the_seal_fails(strat, ready):
+    """Review: dropping an entry from .seal.json left that file unchecked."""
+    import json as _json
+
+    spath = ready / ".seal.json"
+    data = _json.loads(spath.read_text())
+    del data["claims.jsonl"]
+    del data["sources/S001.md"]
+    spath.write_text(_json.dumps(data))
+    r = strat("gate", "check", "1")
+    assert r.code == 1 and "claims.jsonl: not in the seal" in r.err
+    assert "sources/S001.md: not in the seal" in r.err
+
+
 def test_cli_writes_keep_the_seal(strat, ready):
     from strat.validate import seal_errors
 

@@ -43,18 +43,25 @@ def since(t: float | None) -> list[dict]:
     return [m for m in messages() if t is None or float(m.get("t") or 0) > t]
 
 
+NO = re.compile(r"(^|[^\w])(нет|не|ни|no|not|don't|do not)(?=$|[^\w])", re.I)
+
+
 def is_yes(text: str) -> bool:
-    return bool(YES.search(text or ""))
+    """A yes word and no negation anywhere: «Не утверждаю» and «Нет, не согласен» are not a yes;
+    a mixed answer is treated as a no, so the agent asks again."""
+    return bool(YES.search(text or "")) and not NO.search(text or "")
 
 
 def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip().lower().strip(".!")
 
 
-def quoted_by_user(reason: str) -> bool:
-    """True when the reason quotes («...» or "...") words that appear in a user message."""
+def quoted_by_user(reason: str, after: float | None = None) -> bool:
+    """True when the reason quotes («...» or "...") words that appear in a user message sent
+    after the moment `after` (the objection was raised then; older words do not answer it) and
+    that is a yes (quoting a refusal is not acceptance)."""
     quotes = [_norm(a or b) for a, b in QUOTE.findall(reason or "")]
     if not quotes:
         return False
-    said = [_norm(m["text"]) for m in messages()]
+    said = [_norm(m["text"]) for m in since(after) if is_yes(m["text"])]
     return any(q and any(q in s for s in said) for q in quotes)

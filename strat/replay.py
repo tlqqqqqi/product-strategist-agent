@@ -66,7 +66,7 @@ def _local_users() -> list[str]:
 
 def _user_pattern() -> re.Pattern | None:
     names = _local_users()
-    return re.compile(r"(?<![\w.-])(?:" + "|".join(map(re.escape, names)) + r")(?![\w-])") \
+    return re.compile(r"(?<![\w.-])(?:" + "|".join(map(re.escape, names)) + r")(?![\w-])", re.I) \
         if names else None
 
 

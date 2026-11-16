@@ -59,7 +59,8 @@ def test_yes_words():
                  "Принимаю этот риск", "ок", "Согласен"):
         assert is_yes(text), text
     for text in ("Продолжай.", "По умолчанию.", "Нет", "Подожди, а почему вариант 3?",
-                 "продолжи кейс", "Данные устарели"):
+                 "продолжи кейс", "Данные устарели", "Нет, не согласен", "Не утверждаю",
+                 "Не подписываю", "нет, не ок", "Пока не принимаю", "no, not ok"):
         assert not is_yes(text), text
 
 
@@ -81,3 +82,46 @@ def test_risk_accepted_must_quote_the_users_real_words(strat, ready, cases):
     said(cases, "Да, принимаю риск оттока, идём дальше")
     assert set_verdict(ready, "O001", "risk-accepted",
                        "Пользователь: «принимаю риск оттока»", False) == 0
+
+
+def test_deleting_the_inbox_does_not_switch_the_check_off(strat, ready, cases):
+    """Review: `rm cases/.inbox.jsonl` turned the user's-yes check into the old no-hook rule."""
+    said(cases, "Начнём", t=time.time() - 60)
+    assert strat("gate", "check", "1").code == 0
+    (cases / ".inbox.jsonl").unlink()
+    r = strat("gate", "approve", "1")
+    assert r.code == 1 and "inbox" in r.err
+
+
+def test_risk_accepted_quotes_a_message_sent_after_the_objection(strat, ready, cases):
+    """Review: quoting «Подписываю» from an old message passed; the words must answer the risk."""
+    from datetime import datetime
+
+    import pytest
+    from strat.consult import set_verdict
+    from strat.core import StratError, write_jsonl
+
+    said(cases, "Принимаю риск оттока", t=time.time() - 120)
+    raised = datetime.fromtimestamp(time.time() - 60).astimezone().isoformat(timespec="seconds")
+    write_jsonl(ready / "objections.jsonl", [
+        {"id": "O001", "call": "challenge", "target": "Вариант 3", "severity": "major",
+         "text": "Отток может не вернуться", "by": "test", "at": raised}])
+    with pytest.raises(StratError, match="user's own words"):
+        set_verdict(ready, "O001", "risk-accepted", "Пользователь: «принимаю риск оттока»", False)
+    said(cases, "Да, принимаю риск оттока")
+    assert set_verdict(ready, "O001", "risk-accepted",
+                       "Пользователь: «принимаю риск оттока»", False) == 0
+
+
+def test_risk_accepted_cannot_quote_a_refusal(strat, ready, cases):
+    """Review: quoting «Нет» from the user's refusal passed the words check."""
+    import pytest
+    from strat.consult import set_verdict
+    from strat.core import StratError, write_jsonl
+
+    write_jsonl(ready / "objections.jsonl", [
+        {"id": "O001", "call": "challenge", "target": "Вариант 3", "severity": "major",
+         "text": "Отток может не вернуться", "by": "test"}])
+    said(cases, "Нет, этот риск не принимаю")
+    with pytest.raises(StratError, match="user's own words"):
+        set_verdict(ready, "O001", "risk-accepted", "Пользователь: «Нет»", False)

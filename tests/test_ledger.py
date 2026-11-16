@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from strat.core import read_jsonl
+from strat.core import read_jsonl, seal
 
 PRICE = "Семейный тариф: 2 ТБ на 5 человек — 299 ₽ в месяц."
 
@@ -149,6 +149,9 @@ def test_check_all_reports_a_quote_that_no_longer_matches(strat, src, case):
     fact(strat)
     snap = case / "sources" / "S001.md"
     snap.write_text(snap.read_text().replace("299 ₽", "349 ₽"))
+    r = strat("claim", "check", "--all")
+    assert r.code == 1 and "sources/S001.md: changed outside bin/strat" in r.err  # seal first
+    seal(snap)  # a page that changed for a reason the seal does not know: the quote check reports it
     r = strat("claim", "check", "--all", "--json")
     assert r.code == 1
     assert r.data["results"][0] == {"id": "C001", "quote": False, "supported": None,

@@ -111,13 +111,32 @@ def next_number(ids: Iterable[str]) -> int:
     return max(nums, default=0) + 1
 
 
+def check_seal(path: Path) -> None:
+    """Before the CLI writes a case record file: the case must still match its seal, or the
+    write would re-hash a hand edit and make it pass the gate. Nothing is written on a mismatch."""
+    cdir = _case_of(path)
+    if cdir is None or not (cdir / SEAL).is_file():
+        return
+    from strat.validate import seal_errors
+
+    errors = seal_errors(cdir)
+    if errors:
+        raise StratError("; ".join(errors))
+
+
 def _maybe_seal(path: Path) -> None:
     if path.name in SEALED_NAMES:
         seal(path)
 
 
+def _guard(path: Path) -> None:
+    if path.name in SEALED_NAMES:
+        check_seal(path)
+
+
 def write_json(path: Path, data: Any) -> None:
     """Write atomically so a crash never leaves half a file."""
+    _guard(path)
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     tmp.replace(path)
@@ -136,13 +155,15 @@ def read_jsonl(path: Path) -> list[dict]:
 
 
 def append_jsonl(path: Path, row: dict) -> None:
+    _guard(path)
     with path.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(row, ensure_ascii=False) + "\n")
     _maybe_seal(path)
 
 
 def write_jsonl(path: Path, rows: Iterable[dict]) -> None:
-    tmp = path.with_suffix(path.suffix + ".tmp")
+    _guard(path)
+    tmp =path.with_suffix(path.suffix + ".tmp")
     tmp.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
     tmp.replace(path)
     _maybe_seal(path)

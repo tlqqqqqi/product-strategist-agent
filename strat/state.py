@@ -122,6 +122,10 @@ def new_case(case_id: str, title: str, as_json: bool = False) -> int:
              "next": "Intake: read the request and materials, ask at most 5 questions "
                      "(skills/intake)",
              "budget": {"limit_usd": limit, "spent_usd": 0.0}, "created": now()}
+    from strat import inbox
+
+    if inbox.available():
+        state["inbox"] = True  # the harness records the user's words; approvals will need them
     save(target, state)
     for rel in ("claims.jsonl", "objections.jsonl", "log.jsonl", "sources/index.jsonl"):
         if (target / rel).is_file():
@@ -197,6 +201,7 @@ def step(step_id: str, case: str | None = None, stage: str | None = None, out: s
         _check_written_file(cdir, out)
     if stage is not None:
         state["stage"] = stage
+        _reopen_gates_after(state, stage)
     if next_ is not None:
         state["next"] = next_
     save(cdir, state)
@@ -208,12 +213,33 @@ def step(step_id: str, case: str | None = None, stage: str | None = None, out: s
     return 0
 
 
+GATES_AFTER = {"intake": [1, 2, 3], "plan": [1, 2, 3], "research": [2, 3], "strategy": [3]}
+
+
+def _reopen_gates_after(state: dict, stage: str) -> None:
+    """Going back to a work stage (the user changed their mind, `skills/revise`) reopens the
+    gates after it: they are checked and approved again with the user, under a new round."""
+    for g in GATES_AFTER.get(stage, []):
+        if state["gates"][str(g)] == "approved":
+            state["gates"][str(g)] = "pending"
+            state.setdefault("ready_at", {}).pop(str(g), None)
+            rounds = state.setdefault("rounds", {})
+            rounds[str(g)] = rounds.get(str(g), 1) + 1
+            if g == 2:
+                state.pop("chosen_option", None)
+
+
+def _approve_step(state: dict, n: int) -> str:
+    k = state.get("rounds", {}).get(str(n), 1)
+    return f"gate{n}.approve" + (f".{k}" if k > 1 else "")
+
+
 def gate_approve(n: int, option: int | None = None, case: str | None = None,
                  as_json: bool = False) -> int:
     """Record the user's approval of gate n and advance the stage. Gate 2 records the number of
     the option the user chose (`not-chosen` verdicts are checked against it)."""
     cdir = case_path(case)
-    if replay(cdir, f"gate{n}.approve", as_json, "gate"):
+    if replay(cdir, _approve_step(load(cdir), n), as_json, "gate"):
         return 0
     if n == 2 and option is None:
         raise StratError("gate 2: pass the number of the option the user chose: "
@@ -223,6 +249,16 @@ def gate_approve(n: int, option: int | None = None, case: str | None = None,
         raise StratError(f"stage is {state['stage']}, not gate{n}: run `strat gate check {n}` "
                          "first and present the gate to the user")
     _recheck_gate(cdir, n)
+    if n == 2:
+        import re
+
+        opts = cdir / "options.md"
+        numbers = {int(x) for x in re.findall(r"^#{2,4}\s*Вариант\s+(\d+)",
+                                              opts.read_text(encoding="utf-8") if opts.is_file()
+                                              else "", re.M)}
+        if option not in numbers:
+            raise StratError(f"options.md has no \"Вариант {option}\"; pass the number of the "
+                             f"option the user chose ({', '.join(map(str, sorted(numbers)))})")
     said = _users_yes(state, n)
     state["gates"][str(n)] = "approved"
     if n == 2:
@@ -230,7 +266,7 @@ def gate_approve(n: int, option: int | None = None, case: str | None = None,
     state["stage"] = AFTER_GATE[n]
     state["next"] = NEXT_AFTER_GATE[n]
     save(cdir, state)
-    log_action(cdir, step=f"gate{n}.approve", tool="gate", stage=f"gate{n}",
+    log_action(cdir, step=_approve_step(state, n), tool="gate", stage=f"gate{n}",
                note="approved by the user" + (f": «{said}»" if said else " (no inbox hook)"))
     emit(f"gate {n} approved; stage: {state['stage']}; next: {state['next']}",
          {"gate": n, "stage": state["stage"], "next": state["next"]}, as_json)
@@ -245,6 +281,10 @@ def _users_yes(state: dict, n: int) -> str | None:
     from strat import inbox
 
     if not inbox.available():
+        if state.get("inbox"):
+            raise StratError(f"{inbox.NAME} is gone, but this case had it: the harness hook "
+                             "writes the user's words there and approvals need them. Do not "
+                             "delete or edit it; ask the user to restore it or to start a new case")
         return None
     after = inbox.since(state.get("ready_at", {}).get(str(n)))
     if not after:

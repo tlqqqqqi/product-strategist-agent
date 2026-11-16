@@ -4,7 +4,7 @@ import json
 
 from conftest import REPO
 
-from strat.core import read_jsonl
+from strat.core import read_jsonl, write_json
 
 
 def state_of(case):
@@ -75,7 +75,7 @@ def test_gate_approve_advances_and_logs(strat, case, monkeypatch):
     monkeypatch.setattr("strat.validate.gate_errors", lambda cdir, n: [])  # files: test_validate
     s = state_of(case)
     s["stage"] = "gate1"
-    (case / "state.json").write_text(json.dumps(s))
+    write_json(case / "state.json", s)
     r = strat("gate", "approve", "1", "--json")
     assert r.code == 0
     s = state_of(case)
