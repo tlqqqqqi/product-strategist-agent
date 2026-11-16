@@ -18,6 +18,7 @@ from pathlib import Path
 
 from strat import sources
 from strat.core import (
+    next_number,
     StratError,
     case_path,
     emit,
@@ -268,7 +269,7 @@ def add(type_: str, kind: str, text: str, case: str | None = None, source: str |
                 raise StratError(f"quote not found in {label}: copy it exactly from "
                                  f"{sources.get(cdir, source)['snapshot']}")
             check["quote"] = True
-    cid = f"C{len(claims) + 1:03d}"
+    cid = f"C{next_number(c['id'] for c in claims):03d}"
     claim = {"id": cid, "text": text.strip(), "type": type_, "kind": kind, "source": source,
              "where": where, "quote": quote, "as_of": as_of, "status": "active",
              "supports": support_ids, "replaced_by": None, "check": check, "added": now(),

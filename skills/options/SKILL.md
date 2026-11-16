@@ -8,9 +8,11 @@ description: Use after research or at stage gate2. Rewrites the options on the r
 ## 1. Rewrite options.md on the evidence
 
 - Keep the template's headings. "Ситуация": the 3-5 facts that matter most, each cited.
-- At least three options, including "Оставить как есть" and "Закрыть / прекратить
-  вкладываться". If research showed that a draft option is a rewording of another, merge them;
-  if it suggested a new one, add it.
+- At least four options (the Gate 2 check counts "### Вариант N"), including "Оставить как
+  есть" and "Закрыть / прекратить вкладываться", and at least one built from what the research
+  found outside: how a competitor or an analogue solved it, what a study suggests. If research
+  showed that a draft option is a rewording of another, merge them and find a real alternative
+  in its place.
 - For each option: "Суть", "Что должно быть правдой", "Сильнейшее возражение", "Цена и риск".
   Every line cites claims. Keep facts and hypotheses apart in the wording: "данные показывают"
   only for `fact` claims, "предполагаем" for hypotheses and assumptions, "прогноз" for forecasts.

@@ -7,8 +7,9 @@
 - Prefer the competitor's own tariff or help page over aggregators and news.
 - For a number, search for the primary report (regulator, company disclosure) rather than
   an article quoting it.
-- Two or three queries per question are usually enough; if the third gives nothing new, record
-  a gap.
+- Search in rounds (see `research-themes.md`): a broad round over the sub-questions, then a
+  round that follows the names, terms and numbers you found. Stop when two new queries in a
+  row bring nothing new; then record a gap.
 
 ## Which `--kind`
 

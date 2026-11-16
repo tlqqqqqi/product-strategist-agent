@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 
 from strat.core import (
+    seal,
     CASE_ID,
     FAILED,
     StratError,
@@ -122,6 +123,9 @@ def new_case(case_id: str, title: str, as_json: bool = False) -> int:
                      "(skills/intake)",
              "budget": {"limit_usd": limit, "spent_usd": 0.0}, "created": now()}
     save(target, state)
+    for rel in ("claims.jsonl", "objections.jsonl", "log.jsonl", "sources/index.jsonl"):
+        if (target / rel).is_file():
+            seal(target / rel)
     (cases_dir() / ".current").write_text(case_id + "\n", encoding="utf-8")
     emit(f"created case {case_id} at {target}\nstage: intake",
          {"case": case_id, "path": str(target), "stage": "intake"}, as_json)

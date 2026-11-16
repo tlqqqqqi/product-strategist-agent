@@ -36,10 +36,11 @@ ask which answers could change their ranking.
 - Rate impact (could it flip the leader?) and cost (local material: low; web page: medium;
   needs new data: high). Order by impact, then cost.
 - Name where the answer is likely to be (`где искать:`): a material by S id, a type of web page, a competitor.
-- At least one question goes to the web (`где искать: веб, <what pages>`): the market, competitors'
-  prices, benchmarks - what the user's materials cannot say about the outside. `strat gate check 1`
-  fails without one, and Gate 2 fails while such a question has no `research.q<N>.search.*` or
-  `research.q<N>.read.*` step.
+- Look wide. Read `skills/research/references/research-themes.md` and pick the themes that
+  could change the choice here (market, competitors, analogues, benchmarks, users' voice,
+  outside causes, channels, studies, regulation). At least 4 questions go to the web over at
+  least 3 themes: `тема: <theme>; где искать: веб, <what pages>`. `strat gate check 1` counts
+  them; Gate 2 checks that each was searched in several ways and its pages saved.
 - Write the stop rule: stop when no open question can change the ranking, or when the budget is
   spent; what is left becomes a gap.
 - Everything you decide not to research is listed under "Пробелы" as `gap` claims.

@@ -7,7 +7,7 @@ import pytest
 
 from strat import models, net
 from strat.core import read_json, read_jsonl
-from test_validate import ready  # noqa: F401  (a case whose Gate 1 files and claims pass)
+from test_validate import ready, research  # noqa: F401  (ready: a case whose Gate 1 files and claims pass)
 
 KEYS = ("STRAT_PEER_API_KEY", "STRAT_PEER_BASE_URL", "STRAT_PEER_MODEL")
 
@@ -245,6 +245,7 @@ def test_gate2_approval_records_the_chosen_option(strat, ready):
     assert strat("gate", "check", "1").code == 0
     assert strat("gate", "approve", "1").code == 0
     assert strat("judge", "support", "--claim", "C001", "--answer", "yes").code == 0
+    research(strat, ready)
     assert strat("gate", "check", "2").code == 0
     r = strat("gate", "approve", "2")
     assert r.code == 1 and "--option" in r.err

@@ -205,49 +205,143 @@ def accepted_risk_errors(cdir: Path, text: str) -> list[str]:
             if o.get("verdict") == "risk-accepted" and o["id"] not in text]
 
 
-# --- research reaches the web ---------------------------------------------------------------
+# --- research reaches the web, widely --------------------------------------------------------
+# Models take the cheapest path the checks allow: with "one web question, one search" they
+# searched once. The floors below make the research wide; a case may go far beyond them.
 
 QUESTION = re.compile(r"^\s*-\s*\[[ xX]\]\s*Q(\d+)\b(.*)$")
 WHERE = re.compile(r"где искать:\s*([^;\[]*)", re.I)
+THEME = re.compile(r"тема:\s*([^;\[]*)", re.I)
 WEB = re.compile(r"веб|web|интернет|сайт|https?://|страниц", re.I)
+OPTION = re.compile(r"^#{2,4}\s*Вариант\s+\d+", re.M)
+FLOOR = {"web_questions": 4, "themes": 3, "searches": 4, "kinds": 2, "pages": 4,
+         "web_facts": 8, "web_sites": 5, "options_gate1": 3, "options_gate2": 4}
 
 
-def web_questions(cdir: Path) -> list[int]:
-    """Numbers of plan.md questions whose "где искать" points to the web."""
+def web_questions(cdir: Path) -> dict[int, str]:
+    """plan.md questions whose "где искать" names the web -> their theme ("" if none)."""
     path = cdir / "plan.md"
     if not path.is_file():
-        return []
-    out = []
+        return {}
+    out = {}
     for line in path.read_text(encoding="utf-8").splitlines():
         m = QUESTION.match(line)
         where = m and WHERE.search(m.group(2))
         if where and WEB.search(where.group(1)):
-            out.append(int(m.group(1)))
+            theme = THEME.search(m.group(2))
+            out[int(m.group(1))] = theme.group(1).strip().lower() if theme else ""
     return out
 
 
-def web_errors(cdir: Path, n: int) -> list[str]:
-    """Gate 1: the plan asks at least one question of the web. Gate 2: each such question was
-    searched or had a page saved (a search where every provider failed counts as tried).
-    Weak models answered everything from the materials and never searched."""
-    if not (cdir / "plan.md").is_file():
-        return []
-    qs = web_questions(cdir)
-    if not qs:
-        return ["plan.md: no research question is answered from the web; add at least one "
-                "(market, competitors, benchmarks) with `где искать: веб, <what pages>`"]
-    if n < 2:
-        return []
-    tried = set()
+def _site(origin: str) -> str:
+    from urllib.parse import urlparse
+
+    host = urlparse(origin).netloc.lower()
+    return host[4:] if host.startswith("www.") else host
+
+
+def research_tally(cdir: Path) -> dict[int, dict]:
+    """Per research question: searches (ok or failed), kinds of the answered ones, saved pages."""
+    tally: dict[int, dict] = {}
     for row in read_jsonl(cdir / "log.jsonl"):
         m = re.match(r"research\.q(\d+)\.", row.get("step") or "")
-        if m and (row.get("tool") == "read" and row.get("status") == "ok"
-                  or row.get("tool") == "search" and row.get("status") in ("ok", "error")):
-            tried.add(int(m.group(1)))
-    return [f"plan.md: Q{q} is to be answered from the web but has no `bin/strat search` or "
-            f"`bin/strat read <url>` step with id research.q{q}.*; search, save the pages you "
-            "use, and record what you did not find as a gap claim"
-            for q in qs if q not in tried]
+        if not m:
+            continue
+        t = tally.setdefault(int(m.group(1)), {"searches": 0, "failed": 0, "kinds": set(),
+                                                "pages": set()})
+        if row.get("tool") == "search" and row.get("status") in ("ok", "error"):
+            t["searches"] += 1
+            if row["status"] == "error":
+                t["failed"] += 1
+            elif row.get("out") and (cdir / row["out"]).is_file():
+                t["kinds"].add(read_json_safe(cdir / row["out"]).get("kind"))
+        elif row.get("tool") == "read" and row.get("status") == "ok" and row.get("ref"):
+            t["pages"].add(row["ref"])
+    return tally
+
+
+def read_json_safe(path: Path) -> dict:
+    import json
+
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def web_errors(cdir: Path, n: int) -> list[str]:
+    """Gate 1: wide web questions in the plan and enough options. Gate 2: each web question was
+    searched in several ways and its pages saved; the case quotes many facts from many sites."""
+    if not (cdir / "plan.md").is_file():
+        return []
+    errors = []
+    qs = web_questions(cdir)
+    themes = {t for t in qs.values() if t}
+    if len(qs) < FLOOR["web_questions"] or len(themes) < FLOOR["themes"]:
+        errors.append(
+            f"plan.md: {len(qs)} web question(s) over {len(themes)} theme(s); the plan needs at "
+            f"least {FLOOR['web_questions']} questions answered from the web (`где искать: веб, "
+            f"<what pages>`) over at least {FLOOR['themes']} themes (`тема: <theme>`); pick "
+            "themes from skills/research/references/research-themes.md")
+    options = cdir / "options.md"
+    count = len(OPTION.findall(options.read_text(encoding="utf-8"))) if options.is_file() else 0
+    need = FLOOR["options_gate2" if n >= 2 else "options_gate1"]
+    if options.is_file() and count < need:
+        errors.append(f"options.md: {count} option(s); gate {n} needs at least {need} "
+                      "(\"### Вариант N\"), including one built from what the research found")
+    if n < 2:
+        return errors
+    tally = research_tally(cdir)
+    for q in sorted(qs):
+        t = tally.get(q, {"searches": 0, "failed": 0, "kinds": set(), "pages": set()})
+        if t["searches"] and t["failed"] == t["searches"]:
+            continue  # every provider failed each time: the question ends as a gap
+        short = []
+        if t["searches"] < FLOOR["searches"]:
+            short.append(f"{t['searches']}/{FLOOR['searches']} searches")
+        if len(t["kinds"] - {None}) < FLOOR["kinds"]:
+            short.append(f"{len(t['kinds'] - {None})}/{FLOOR['kinds']} search kinds")
+        if len(t["pages"]) < FLOOR["pages"]:
+            short.append(f"{len(t['pages'])}/{FLOOR['pages']} saved pages")
+        if short:
+            errors.append(
+                f"plan.md: Q{q} (web) is researched too narrowly: {', '.join(short)}; run more "
+                f"`bin/strat search` queries (step research.q{q}.search.<k>, different "
+                f"--kind) and save the pages you use (`bin/strat read <url> --step "
+                f"research.q{q}.read.<k>`)")
+    srcs = {s["id"]: s for s in sources.index(cdir)}
+    web_facts = [c for c in ledger.load(cdir) if c["type"] == "fact"
+                 and c["status"] not in ("withdrawn", "replaced")
+                 and srcs.get(c.get("source"), {}).get("kind") == "web"]
+    sites = {_site(srcs[c["source"]]["origin"]) for c in web_facts}
+    if len(web_facts) < FLOOR["web_facts"] or len(sites) < FLOOR["web_sites"]:
+        errors.append(
+            f"claims.jsonl: {len(web_facts)} fact(s) quoted from web pages, from {len(sites)} "
+            f"site(s); gate 2 needs at least {FLOOR['web_facts']} from at least "
+            f"{FLOOR['web_sites']} different sites: quote what the saved pages say")
+    return errors
+
+
+# --- seal --------------------------------------------------------------------------------------
+
+def seal_errors(cdir: Path) -> list[str]:
+    """Record files must match the hashes the CLI wrote; a hand edit fails the gate."""
+    import json
+
+    from strat.core import SEAL, sha256_of
+
+    spath = cdir / SEAL
+    if not spath.is_file():
+        return [f"{SEAL}: missing; the case record was edited outside bin/strat"]
+    errors = []
+    for rel, digest in sorted(json.loads(spath.read_text(encoding="utf-8")).items()):
+        path = cdir / rel
+        if not path.is_file() or sha256_of(path) != digest:
+            errors.append(f"{rel}: changed outside bin/strat (a hand edit or a script). Undo it: "
+                          "change claims only with `strat claim add/replace/withdraw`, verdicts "
+                          "with `strat judge` and `strat consult verdict`, sources with "
+                          "`strat source add` and `strat read`")
+    return errors
 
 
 def check_file(cdir: Path, name: str) -> list[str]:
@@ -279,6 +373,7 @@ def gate_errors(cdir: Path, n: int) -> list[str]:
     errors += fact_errors(cdir, claims)
     if n >= 2:
         errors += verdict_errors(claims)
+    errors += seal_errors(cdir)
     errors += web_errors(cdir, n)
     errors += objection_errors(cdir, n)
     return errors

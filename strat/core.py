@@ -70,11 +70,58 @@ def read_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+# --- seal: the case's record files change only through bin/strat ---------------------------
+# Every write of these files by the CLI records the file's sha256 in <case>/.seal.json; a gate
+# check fails when a file no longer matches (a weak model once wrote support verdicts into
+# claims.jsonl by hand, another rewrote a source snapshot with its own script).
+
+SEAL = ".seal.json"
+SEALED_NAMES = {"state.json", "claims.jsonl", "objections.jsonl", "log.jsonl", "index.jsonl"}
+
+
+def _case_of(path: Path) -> Path | None:
+    for d in (path.parent, path.parent.parent):
+        if (d / "state.json").is_file() or path == d / "state.json":
+            return d
+    return None
+
+
+def sha256_of(path: Path) -> str:
+    import hashlib
+
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def seal(path: Path) -> None:
+    """Record the current hash of a case record file written by the CLI."""
+    cdir = _case_of(path)
+    if cdir is None or not path.is_file():
+        return
+    spath = cdir / SEAL
+    data = json.loads(spath.read_text(encoding="utf-8")) if spath.is_file() else {}
+    data[path.relative_to(cdir).as_posix()] = sha256_of(path)
+    tmp = spath.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    tmp.replace(spath)
+
+
+def next_number(ids: Iterable[str]) -> int:
+    """The next id number: one above the highest, so a deleted line never frees an old id."""
+    nums = [int(m.group(1)) for i in ids if (m := re.match(r"^[A-Z](\d+)$", str(i)))]
+    return max(nums, default=0) + 1
+
+
+def _maybe_seal(path: Path) -> None:
+    if path.name in SEALED_NAMES:
+        seal(path)
+
+
 def write_json(path: Path, data: Any) -> None:
     """Write atomically so a crash never leaves half a file."""
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     tmp.replace(path)
+    _maybe_seal(path)
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -91,12 +138,14 @@ def read_jsonl(path: Path) -> list[dict]:
 def append_jsonl(path: Path, row: dict) -> None:
     with path.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+    _maybe_seal(path)
 
 
 def write_jsonl(path: Path, rows: Iterable[dict]) -> None:
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
     tmp.replace(path)
+    _maybe_seal(path)
 
 
 def env(key: str) -> str:
