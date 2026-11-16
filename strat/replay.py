@@ -248,12 +248,6 @@ def summarize(items: list[dict], web: dict | None = None) -> str:
     if web:
         counts["net"], counts["web"] = web["searches"], web["pages"]
     text = summarize_counts(counts)
-    if web and web["searches"]:
-        names = ", ".join(PROVIDER.get(p, p) for p in web["providers"])
-        n = web["results"]
-        head = f"искал в интернете {web['searches']} {plural(web['searches'], 'раз', 'раза', 'раз')}"
-        extra = f" ({names}; {n} {plural(n, 'результат', 'результата', 'результатов')})"
-        text = re.sub(re.escape(head), lambda m: m.group(0) + extra, text, count=1, flags=re.I)
     return text
 
 

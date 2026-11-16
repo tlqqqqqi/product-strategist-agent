@@ -787,9 +787,9 @@ def test_web_counts_come_from_the_case_log_by_time(tmp_path):
     ]}
     attach_web(run, cdir)
     g1, g2 = run["events"][0], run["events"][2]
-    assert g1["summary"] == ("Искал в интернете 2 раза (Brave, Exa; 18 результатов), "
+    assert g1["summary"] == ("Искал в интернете 2 раза, "
                              "открыл 1 страницу")
-    assert g2["summary"] == "Искал в интернете 1 раз (Brave; 5 результатов)"
+    assert g2["summary"] == "Искал в интернете 1 раз"
     assert run["meta"]["web"] == {"searches": 3, "results": 23, "pages": 1,
                                   "providers": ["brave", "exa"]}
 
