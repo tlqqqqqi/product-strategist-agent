@@ -280,11 +280,7 @@ def _users_yes(state: dict, n: int) -> str | None:
     be a yes. Returns the user's words, or None when the harness has no inbox."""
     from strat import inbox
 
-    if not inbox.available():
-        if state.get("inbox"):
-            raise StratError(f"{inbox.NAME} is gone, but this case had it: the harness hook "
-                             "writes the user's words there and approvals need them. Do not "
-                             "delete or edit it; ask the user to restore it or to start a new case")
+    if not inbox.required(state):
         return None
     after = inbox.since(state.get("ready_at", {}).get(str(n)))
     if not after:

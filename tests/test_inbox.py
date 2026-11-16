@@ -125,3 +125,19 @@ def test_risk_accepted_cannot_quote_a_refusal(strat, ready, cases):
     said(cases, "Нет, этот риск не принимаю")
     with pytest.raises(StratError, match="user's own words"):
         set_verdict(ready, "O001", "risk-accepted", "Пользователь: «Нет»", False)
+
+
+def test_deleting_the_inbox_does_not_skip_the_risk_quote(strat, ready, cases):
+    """Recheck: risk-accepted still skipped its words check when the inbox was deleted."""
+    import pytest
+    from strat.consult import set_verdict
+    from strat.core import StratError, write_jsonl
+
+    said(cases, "Начнём", t=time.time() - 60)
+    assert strat("gate", "check", "1").code == 0      # the case now knows it has an inbox
+    write_jsonl(ready / "objections.jsonl", [
+        {"id": "O001", "call": "challenge", "target": "Вариант 3", "severity": "major",
+         "text": "Отток может не вернуться", "by": "test"}])
+    (cases / ".inbox.jsonl").unlink()
+    with pytest.raises(StratError, match="inbox"):
+        set_verdict(ready, "O001", "risk-accepted", "Пользователь принял риск", False)

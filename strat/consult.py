@@ -306,7 +306,9 @@ def set_verdict(cdir: Path, oid: str | None, verdict: str | None, reason: str | 
             from datetime import datetime
 
             raised = datetime.fromisoformat(o["at"]).timestamp()
-        if inbox.available() and not inbox.quoted_by_user(reason, raised):
+        from strat.state import load as load_state
+
+        if inbox.required(load_state(cdir)) and not inbox.quoted_by_user(reason, raised):
             raise StratError("risk-accepted needs the user's own words: ask the user whether they "
                              "accept this risk, then quote their reply in the reason as «...»")
     cited = CLAIM_ID.findall(reason)

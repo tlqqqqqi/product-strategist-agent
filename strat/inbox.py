@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from strat.core import cases_dir, read_jsonl
+from strat.core import StratError, cases_dir, read_jsonl
 
 NAME = ".inbox.jsonl"
 YES = re.compile(r"(^|[^\w])(да|ага|утвержд\w*|одобр\w*|подпис\w*|соглас\w*|выбира\w*|"
@@ -32,6 +32,18 @@ def path() -> Path:
 
 def available() -> bool:
     return path().is_file()
+
+
+def required(state: dict) -> bool:
+    """True when the user's words must be checked: the inbox exists, or this case had one (a
+    deleted inbox is an error, not "no hook")."""
+    if available():
+        return True
+    if state.get("inbox"):
+        raise StratError(f"{NAME} is gone, but this case had it: the harness hook writes the "
+                         "user's words there and approvals need them. Do not delete or edit it; "
+                         "ask the user to restore it or to start a new case")
+    return False
 
 
 def messages() -> list[dict]:
