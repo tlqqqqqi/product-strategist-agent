@@ -32,16 +32,16 @@ a { color: var(--accent-press); text-underline-offset: 3px; }
 * { scrollbar-width: thin; scrollbar-color: var(--hairline) transparent; }
 .mono { font-family: var(--mono); }
 
-.pg { max-width: 860px; margin: 0 auto; padding: 20px 20px 24px; }
-.pg-head { margin: 0 0 16px; }
+.pg { display: flex; flex-direction: column; height: 100vh; height: 100dvh; min-height: 480px; }
+.pg-head { flex: none; padding: 14px 24px 12px; }
 .pg-head h1 { font-size: 21px; line-height: 1.3; font-weight: 500; letter-spacing: -.015em; margin: 0 0 4px; }
 .pg-head p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--muted); max-width: 75ch; }
 
 /* panel */
-.replay { background: var(--surface); border-radius: 20px; box-shadow: var(--shadow-lg); overflow: hidden;
-  display: flex; flex-direction: column; height: max(520px, calc(100dvh - 140px)); }
+.replay { background: var(--surface); border-top: 1px solid var(--hairline); overflow: hidden;
+  display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .rp-top { display: flex; gap: 10px; align-items: center; justify-content: space-between;
-  padding: 14px 16px; border-bottom: 1px solid var(--hairline); flex: none; }
+  padding: 12px 24px; border-bottom: 1px solid var(--hairline); flex: none; }
 .models { position: relative; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; min-width: 0; flex: 1; padding: 2px; }
 .models::-webkit-scrollbar { display: none; }
 .model { font: inherit; font-size: 14px; font-weight: 500; white-space: nowrap; flex: none;
@@ -59,7 +59,7 @@ a { color: var(--accent-press); text-underline-offset: 3px; }
 #infoBtn[aria-expanded="true"] svg { transform: rotate(180deg); }
 
 .rp-body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.rp-stats { flex: none; display: flex; gap: 4px 16px; flex-wrap: wrap; padding: 8px 16px; font-size: 13px;
+.rp-stats { flex: none; display: flex; gap: 4px 16px; flex-wrap: wrap; padding: 8px 24px; font-size: 13px;
   color: var(--muted); border-bottom: 1px solid var(--hairline); background: var(--surface-2); }
 .rp-stats b { font-weight: 500; color: var(--ink); }
 
@@ -75,7 +75,8 @@ a { color: var(--accent-press); text-underline-offset: 3px; }
 .info p { margin: 12px 0 0; color: var(--muted); font-size: 13px; }
 
 /* conversation */
-.chat { position: relative; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 20px 20px 28px;
+.chat { position: relative; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  padding: 24px max(24px, calc((100% - 960px) / 2)) 32px;
   display: flex; flex-direction: column; gap: 14px; overscroll-behavior: contain; }
 .chat > * { flex: none; }
 .empty { color: var(--muted); font-size: 14px; align-self: center; margin-top: 40px; }
@@ -170,10 +171,18 @@ a.cite:hover { color: var(--accent-press); }
 @keyframes press { 40% { transform: scale(.96); } }
 
 .rp-nav { flex: none; display: flex; align-items: center; gap: 8px; justify-content: space-between;
-  padding: 12px 16px; border-top: 1px solid var(--hairline); background: var(--surface); }
+  padding: 12px max(24px, calc((100% - 960px) / 2)); border-top: 1px solid var(--hairline); background: var(--surface); }
 .rp-pos { font-size: 13px; color: var(--muted); white-space: nowrap; }
 .rp-pos b { font-weight: 500; color: var(--ink); }
-.rp-mid { display: flex; align-items: center; gap: 12px; }
+.rp-mid { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.speed { display: inline-flex; padding: 3px; gap: 2px; border-radius: 10px; background: var(--surface-2);
+  border: 1px solid var(--hairline); }
+.speed button { font: inherit; font-size: 13px; font-weight: 500; border: 0; background: none; color: var(--muted);
+  border-radius: 7px; padding: 4px 9px; min-height: 30px; cursor: pointer;
+  transition: background-color .15s ease-out, color .15s ease-out; }
+.speed button:hover { color: var(--ink); }
+.speed button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(26,31,59,.12); }
+.pend { display: none !important; }
 #play { min-width: 104px; }
 
 /* claim card */
@@ -196,16 +205,15 @@ a.cite:hover { color: var(--accent-press); }
   font-size: 12.5px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); max-height: 12em; overflow: auto; }
 
 @media (max-width: 560px) {
-  .pg { padding: 12px 8px 8px; }
-  .pg-head { padding: 0 8px; margin-bottom: 12px; }
+  .pg-head { padding: 12px 16px 10px; }
   .pg-head h1 { font-size: 18px; }
-  .replay { border-radius: 16px; height: max(480px, calc(100dvh - 120px)); }
   .rp-top { padding: 10px 12px; }
   .rp-stats { padding: 8px 12px; gap: 2px 12px; }
   .chat { padding: 16px 12px 24px; }
   .msg { max-width: 100%; }
   .msg.user { max-width: 92%; }
-  .rp-nav { padding: 10px 12px; }
+  .rp-nav { padding: 10px 12px; flex-wrap: wrap; }
+  .rp-mid { order: 3; flex-basis: 100%; }
   .rp-nav .lbl { display: none; }
   .rp-nav .btn { min-height: 44px; min-width: 44px; }
   #play { min-width: 96px; }
@@ -249,6 +257,9 @@ a.cite:hover { color: var(--accent-press); }
       <div class="rp-mid">
         <span class="rp-pos" id="pos" aria-live="off"></span>
         <button class="btn" id="play" type="button">Пауза</button>
+        <div class="speed" id="speed" role="group" aria-label="Скорость">
+          <button type="button" data-v="1">1×</button><button type="button" data-v="2">2×</button><button type="button" data-v="4">4×</button><button type="button" data-v="max">Сразу</button>
+        </div>
       </div>
       <button class="btn" id="next" type="button" aria-label="Следующее сообщение"><span class="lbl">Сообщение </span>→</button>
     </div>
@@ -270,7 +281,10 @@ a.cite:hover { color: var(--accent-press); }
   var chat = $("chat"), playBtn = $("play"), prevBtn = $("prev"), nextBtn = $("next");
   var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var params = new URLSearchParams(location.hash.replace(/^#/, ""));
-  var maxSpeed = params.get("speed") === "max";
+  var speedVal = params.get("speed");
+  if (!speedVal) { try { speedVal = localStorage.getItem("replay-speed"); } catch (e) {} }
+  if (["1", "2", "4", "max"].indexOf(speedVal) < 0) speedVal = "1";
+  function speed() { return speedVal === "max" ? 1 : +speedVal; }
 
   var bundle = { runs: [] }, run = null, pieces = [], navAt = [], shown = 0;
   var playing = false, timer = null, typing = null, guard = 0, claims = {}, sources = {};
@@ -292,7 +306,7 @@ a.cite:hover { color: var(--accent-press); }
   var FILE_ICON = svg('<path d="M4 1.75h5.5L12.25 4.5v9.75H4z"/><path d="M9.25 1.75V4.75h3"/>', 1.4);
   var CHEVRON = svg('<path d="M4 6l4 4 4-4"/>', 1.6);
   var CHECK = svg('<path d="M3.5 8.5l3 3 6-7"/>', 2);
-  function instant() { return maxSpeed || reduced; }
+  function instant() { return speedVal === "max" || reduced; }
   function fmtNum(x, d) { return x.toFixed(d).replace(".", ","); }
   function fmtTok(x) {
     if (x >= 1e6) return fmtNum(x / 1e6, 1) + "M";
@@ -341,23 +355,34 @@ a.cite:hover { color: var(--accent-press); }
       return i % 2 ? "<code>" + esc(part.slice(1, -1)) + "</code>" : prose(part);
     }).join("");
   }
+  // A list survives blank lines between its items (a loose list) and takes indented lines as
+  // the item's continuation; an ordered list keeps the number it starts from.
   function markdown(text) {
-    var out = [], list = null, para = [];
+    var out = [], list = null, item = null, para = [], blank = false;
     function flushPara() { if (para.length) { out.push("<p>" + para.join("<br>") + "</p>"); para = []; } }
-    function closeList() { if (list) { out.push("</" + list + ">"); list = null; } }
+    function closeItem() { if (item) { out.push("<li>" + item.join("<br>") + "</li>"); item = null; } }
+    function closeList() { closeItem(); if (list) { out.push("</" + list + ">"); list = null; } }
+    function openItem(kind, body, start) {
+      flushPara();
+      if (list !== kind) {
+        closeList();
+        out.push(kind === "ol" && start !== 1 ? '<ol start="' + start + '">' : "<" + kind + ">");
+        list = kind;
+      }
+      closeItem(); item = [inline(body)];
+    }
     String(text || "").split("\n").forEach(function (raw) {
       var line = raw.replace(/\s+$/, ""), m;
-      if (!line.trim()) { flushPara(); closeList(); return; }
-      if ((m = line.match(/^\s*[-*•] (.*)$/))) {
-        flushPara(); if (list !== "ul") { closeList(); out.push("<ul>"); list = "ul"; }
-        out.push("<li>" + inline(m[1]) + "</li>");
-      } else if ((m = line.match(/^\s*\d+[.)] (.*)$/))) {
-        flushPara(); if (list !== "ol") { closeList(); out.push("<ol>"); list = "ol"; }
-        out.push("<li>" + inline(m[1]) + "</li>");
-      } else if ((m = line.match(/^#{1,6} (.*)$/))) {
+      if (!line.trim()) { flushPara(); blank = true; return; }
+      var wasBlank = blank; blank = false;
+      if ((m = line.match(/^\s*[-*•] (.*)$/))) openItem("ul", m[1]);
+      else if ((m = line.match(/^\s*(\d+)[.)] (.*)$/))) openItem("ol", m[2], +m[1]);
+      else if (item && /^\s{2,}\S/.test(line)) item.push(inline(line.trim()));
+      else if ((m = line.match(/^#{1,6} (.*)$/))) {
         flushPara(); closeList(); out.push("<p><strong>" + inline(m[1]) + "</strong></p>");
       } else {
-        closeList(); para.push(inline(line));
+        if (list || wasBlank) closeList();
+        para.push(inline(line));
       }
     });
     flushPara(); closeList();
@@ -492,13 +517,20 @@ a.cite:hover { color: var(--accent-press); }
   function typeInto(node, done) {
     var walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT), nodes = [], n;
     while ((n = walker.nextNode())) { nodes.push([n, n.nodeValue]); n.nodeValue = ""; }
+    // Blocks (and so list numbers) appear only when the typing reaches them.
+    var blocks = node.querySelectorAll("p,ul,ol,li");
+    Array.prototype.forEach.call(blocks, function (b) { b.classList.add("pend"); });
+    function uncover(t) {
+      for (var p = t.parentNode; p && p !== node; p = p.parentNode) if (p.classList) p.classList.remove("pend");
+    }
     var total = nodes.reduce(function (a, x) { return a + x[1].length; }, 0);
-    var per = Math.max(6, Math.ceil(total / 60)), i = 0, raf = null;
+    var per = Math.max(3, Math.ceil(total / 150)), i = 0, raf = null;
     node.classList.add("typing");
     function finish() {
       if (!typing) return;
       cancelAnimationFrame(raf);
       nodes.forEach(function (x) { x[0].nodeValue = x[1]; });
+      Array.prototype.forEach.call(blocks, function (b) { b.classList.remove("pend"); });
       node.classList.remove("typing"); node.onclick = null; typing = null;
       follow(); done();
     }
@@ -506,9 +538,10 @@ a.cite:hover { color: var(--accent-press); }
     node.onclick = function (e) { if (!e.target.closest("a")) finish(); };
     (function tick() {
       if (!typing) return;
-      var left = per;
+      var left = per * speed();
       while (left > 0 && i < nodes.length) {
         var x = nodes[i], cur = x[0].nodeValue.length, take = Math.min(left, x[1].length - cur);
+        if (!cur) uncover(x[0]);
         x[0].nodeValue = x[1].slice(0, cur + take); left -= take;
         if (x[0].nodeValue.length >= x[1].length) i++;
       }
@@ -533,7 +566,7 @@ a.cite:hover { color: var(--accent-press); }
     if (!animate) { if (node.reveal) node.reveal(); return done(); }
     follow();
     if (p.kind === "agent") return typeInto(node, done);
-    if (node.reveal) { timer = setTimeout(function () { node.reveal(); done(); }, p.kind === "gate" ? 800 : 600); return; }
+    if (node.reveal) { timer = setTimeout(function () { node.reveal(); done(); }, (p.kind === "gate" ? 800 : 600) / speed()); return; }
     done();
   }
   var PAUSE = { steps: 350, user: 700, agent: 600, question: 700, gate: 900 };
@@ -572,7 +605,7 @@ a.cite:hover { color: var(--accent-press); }
       if (shown >= pieces.length) return finishAll();
       if (instant()) {
         if (++guard % 40 === 0) timer = setTimeout(step, 0); else step();
-      } else timer = setTimeout(step, PAUSE[p.kind] || 400);
+      } else timer = setTimeout(step, (PAUSE[p.kind] || 400) / speed());
     });
   }
   function play() {
@@ -725,6 +758,19 @@ a.cite:hover { color: var(--accent-press); }
     jump(navCount() + 1);
   };
   playBtn.onclick = function () { if (playing) pause(); else play(); };
+  function showSpeed() {
+    Array.prototype.forEach.call($("speed").children, function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.v === speedVal));
+    });
+  }
+  Array.prototype.forEach.call($("speed").children, function (b) {
+    b.onclick = function () {
+      speedVal = b.dataset.v; showSpeed();
+      try { localStorage.setItem("replay-speed", speedVal); } catch (e) {}
+      if (instant() && typing) typing.finish();
+    };
+  });
+  showSpeed();
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") {
       if (!card.hidden) { closeCard(); return; }

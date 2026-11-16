@@ -35,7 +35,11 @@ ask which answers could change their ranking.
   to its cell ("вариант x критерий").
 - Rate impact (could it flip the leader?) and cost (local material: low; web page: medium;
   needs new data: high). Order by impact, then cost.
-- Name where the answer is likely to be: a material by S id, a type of web page, a competitor.
+- Name where the answer is likely to be (`где искать:`): a material by S id, a type of web page, a competitor.
+- At least one question goes to the web (`где искать: веб, <what pages>`): the market, competitors'
+  prices, benchmarks - what the user's materials cannot say about the outside. `strat gate check 1`
+  fails without one, and Gate 2 fails while such a question has no `research.q<N>.search.*` or
+  `research.q<N>.read.*` step.
 - Write the stop rule: stop when no open question can change the ranking, or when the budget is
   spent; what is left becomes a gap.
 - Everything you decide not to research is listed under "Пробелы" as `gap` claims.

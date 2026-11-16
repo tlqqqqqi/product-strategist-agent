@@ -43,7 +43,8 @@ PLAN = """# План исследования
 
 ## Вопросы, которые могут изменить выбор
 
-- [ ] Q1 Где сосредоточен отток - ячейка: откат цены x отток; влияние: высокое [C001]
+- [ ] Q1 Где сосредоточен отток - ячейка: откат цены x отток; влияние: высокое; где искать: S001 [C001]
+- [ ] Q2 Сколько стоит семейный тариф у конкурентов - ячейка: откат цены x выручка; влияние: среднее; где искать: веб, тарифные страницы [C003]
 
 ## Правило остановки
 
@@ -126,7 +127,21 @@ def ready(strat, case):
     for name, text in (("brief.md", BRIEF), ("plan.md", PLAN), ("table.md", TABLE),
                        ("options.md", OPTIONS)):
         (case / name).write_text(text)
+    searched(case, 2)
     return case
+
+
+def searched(case, n, tool="search", status="ok"):
+    """The log line `strat search` (or `strat read <url>`) leaves for research question n."""
+    with (case / "log.jsonl").open("a") as f:
+        f.write(json.dumps({"step": f"research.q{n}.{tool}.1", "tool": tool, "status": status,
+                            "stage": "research", "usd": 0}) + "\n")
+
+
+def unsearched(case):
+    rows = [r for r in (case / "log.jsonl").read_text().splitlines()
+            if '"research.q' not in r]
+    (case / "log.jsonl").write_text("".join(r + "\n" for r in rows))
 
 
 def stage(case):
@@ -304,3 +319,35 @@ def test_gate_check_reminds_about_flagged_sources(strat, ready):
     strat("source", "add", "materials/competitor.html")
     r = strat("gate", "check", "1")
     assert r.code == 0 and "S002 contains text addressed to AI" in r.out
+
+
+def test_gate1_needs_a_research_question_answered_from_the_web(strat, ready):
+    """Two of three test runs never searched: the plan must look outside the materials."""
+    edit(ready, "plan.md", "где искать: веб, тарифные страницы", "где искать: S001")
+    r = strat("gate", "check", "1")
+    assert r.code == 1 and "plan.md" in r.err and "web" in r.err
+
+
+def test_gate2_needs_a_search_or_a_saved_page_for_each_web_question(strat, ready):
+    assert strat("gate", "check", "1").code == 0
+    assert strat("gate", "approve", "1").code == 0
+    assert strat("judge", "support", "--claim", "C001", "--answer", "yes").code == 0
+    unsearched(ready)
+    r = strat("gate", "check", "2")
+    assert r.code == 1 and "Q2" in r.err and "strat search" in r.err
+    searched(ready, 1)  # a search for another question does not count
+    assert strat("gate", "check", "2").code == 1
+    searched(ready, 2, tool="read")  # a saved page for Q2 does
+    r = strat("gate", "check", "2")
+    assert r.code == 0, r.err
+
+
+def test_a_failed_search_counts_as_an_attempt(strat, ready):
+    """Every provider failed: the agent tried; the question ends as a gap, not a blocked gate."""
+    assert strat("gate", "check", "1").code == 0
+    assert strat("gate", "approve", "1").code == 0
+    assert strat("judge", "support", "--claim", "C001", "--answer", "yes").code == 0
+    unsearched(ready)
+    searched(ready, 2, status="error")
+    r = strat("gate", "check", "2")
+    assert r.code == 0, r.err

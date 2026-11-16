@@ -205,6 +205,51 @@ def accepted_risk_errors(cdir: Path, text: str) -> list[str]:
             if o.get("verdict") == "risk-accepted" and o["id"] not in text]
 
 
+# --- research reaches the web ---------------------------------------------------------------
+
+QUESTION = re.compile(r"^\s*-\s*\[[ xX]\]\s*Q(\d+)\b(.*)$")
+WHERE = re.compile(r"где искать:\s*([^;\[]*)", re.I)
+WEB = re.compile(r"веб|web|интернет|сайт|https?://|страниц", re.I)
+
+
+def web_questions(cdir: Path) -> list[int]:
+    """Numbers of plan.md questions whose "где искать" points to the web."""
+    path = cdir / "plan.md"
+    if not path.is_file():
+        return []
+    out = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        m = QUESTION.match(line)
+        where = m and WHERE.search(m.group(2))
+        if where and WEB.search(where.group(1)):
+            out.append(int(m.group(1)))
+    return out
+
+
+def web_errors(cdir: Path, n: int) -> list[str]:
+    """Gate 1: the plan asks at least one question of the web. Gate 2: each such question was
+    searched or had a page saved (a search where every provider failed counts as tried).
+    Weak models answered everything from the materials and never searched."""
+    if not (cdir / "plan.md").is_file():
+        return []
+    qs = web_questions(cdir)
+    if not qs:
+        return ["plan.md: no research question is answered from the web; add at least one "
+                "(market, competitors, benchmarks) with `где искать: веб, <what pages>`"]
+    if n < 2:
+        return []
+    tried = set()
+    for row in read_jsonl(cdir / "log.jsonl"):
+        m = re.match(r"research\.q(\d+)\.", row.get("step") or "")
+        if m and (row.get("tool") == "read" and row.get("status") == "ok"
+                  or row.get("tool") == "search" and row.get("status") in ("ok", "error")):
+            tried.add(int(m.group(1)))
+    return [f"plan.md: Q{q} is to be answered from the web but has no `bin/strat search` or "
+            f"`bin/strat read <url>` step with id research.q{q}.*; search, save the pages you "
+            "use, and record what you did not find as a gap claim"
+            for q in qs if q not in tried]
+
+
 def check_file(cdir: Path, name: str) -> list[str]:
     """Checks for one file the agent just wrote (used by `strat step --out`)."""
     name = Path(name).as_posix()
@@ -234,6 +279,7 @@ def gate_errors(cdir: Path, n: int) -> list[str]:
     errors += fact_errors(cdir, claims)
     if n >= 2:
         errors += verdict_errors(claims)
+    errors += web_errors(cdir, n)
     errors += objection_errors(cdir, n)
     return errors
 

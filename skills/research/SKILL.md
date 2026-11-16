@@ -19,6 +19,9 @@ is used anywhere. Read `knowledge/claims.md` if you have not in this session.
    `skills/research/references/search-queries.md`.
    Then save every page you use: `bin/strat read <url> --step research.q<N>.read.<k>`. Quote
    from the saved snapshot, never from a search snippet or a tool summary.
+   Every question whose `где искать` names the web gets at least one such search or saved
+   page, even when the materials seem to answer it: Gate 2 checks the log for it. Nothing
+   useful found: say so in a `gap` claim.
 3. Public product flows (tariff pages, sign-up screens up to the form): screenshots with
    element boxes, `skills/ux-capture/SKILL.md`. Calculations on tables:
    `skills/data-analysis/SKILL.md`. Users' voice - an interview guide, a transcript the user supplies, model

@@ -49,8 +49,11 @@ Read the skill file before you act on a stage. Method knowledge is in `knowledge
 
 ## Rules that always hold
 
-1. **Language.** Speak Russian to the user. Case documents (brief, plan, table, options,
-   strategies, memo) are written in Russian. Commands and their output stay in English.
+1. **Language.** Speak Russian to the user: every line you write in the chat, including the
+   short notes between commands («Читаю материалы», «Запускаю проверку Gate 1»). Case
+   documents (brief, plan, table, options, strategies, memo) are written in Russian. Only
+   commands, their output and file names stay in English. A gate is «Gate 1» or «гейт», never
+   «ворота».
 2. **Every finding is a claim.** Record it with `bin/strat claim add` before you use it. Options,
    strategies and the memo cite only claim ids, as `[C014]` or `[C014, C021]`. A statement
    without a source is an `assumption` or a `gap`, never dropped and never dressed as a fact.

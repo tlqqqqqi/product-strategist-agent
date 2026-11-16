@@ -177,7 +177,7 @@ def condense(name: str, inp: dict, cwd: str | None) -> str:
 
 DETAIL_MAX = 400
 CATEGORY = {
-    "read": "read", "bash": "command", "grep": "search", "glob": "search", "websearch": "search",
+    "read": "read", "bash": "command", "grep": "search", "glob": "search", "websearch": "net",
     "list": "search", "ls": "search", "edit": "edit", "write": "edit", "multiedit": "edit",
     "notebookedit": "edit", "patch": "edit", "webfetch": "web", "skill": "skill", "error": None,
 }
@@ -186,9 +186,11 @@ PHRASES = [
     ("read", "прочитал", "файл", "файла", "файлов"),
     ("command", "выполнил", "команду", "команды", "команд"),
     ("search", "искал", "раз", "раза", "раз"),
+    ("net", "искал в интернете", "раз", "раза", "раз"),
     ("edit", "изменил", "файл", "файла", "файлов"),
     ("web", "открыл", "страницу", "страницы", "страниц"),
     ("skill", "открыл", "навык", "навыка", "навыков"),
+    ("peer", "сверился с другой моделью", "раз", "раза", "раз"),
     ("other", "ещё", "действие", "действия", "действий"),
     ("fail", "", "ошибка", "ошибки", "ошибок"),
 ]
@@ -212,10 +214,28 @@ def summarize_counts(counts: dict) -> str:
     return text[:1].upper() + text[1:]
 
 
+# Web search, saved web pages and second-model checks run through bin/strat inside a shell
+# command; they get their own category so the research stage is visible in the summary.
+STRAT_CMD = [
+    (re.compile(r"\bstrat search\b"), "net"),
+    (re.compile(r"\bstrat read https?://"), "web"),
+    (re.compile(r"\bstrat (?:consult|judge|review)\b"), "peer"),
+]
+
+
+def category(item: dict) -> str | None:
+    tool = item["tool"].lower()
+    if tool == "bash":
+        for pattern, cat in STRAT_CMD:
+            if pattern.search(item.get("line", "")):
+                return cat
+    return CATEGORY.get(tool, "other")
+
+
 def summarize(items: list[dict]) -> str:
     counts: Counter = Counter()
     for it in items:
-        cat = CATEGORY.get(it["tool"].lower(), "other")
+        cat = category(it)
         if cat:
             counts[cat] += 1
         if it.get("ok") is False:

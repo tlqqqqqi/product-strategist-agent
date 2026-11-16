@@ -78,7 +78,7 @@ def test_claude_code_run_keeps_the_conversation_in_order(exported):
     steps = run["events"][2]
     assert [i["ok"] for i in steps["items"]] == [True, True, True, False, True]
     assert [i["tool"] for i in steps["items"]] == ["Bash", "Write", "Read", "Bash", "Bash"]
-    assert steps["summary"] == "Прочитал 1 файл, выполнил 3 команды, изменил 1 файл, 1 ошибка"
+    assert steps["summary"] == "Прочитал 1 файл, выполнил 2 команды, искал в интернете 1 раз, изменил 1 файл, 1 ошибка"
     assert steps["t"] == steps["items"][0]["t"] == 6
     assert run["events"][0]["t"] == 0 and run["events"][-1]["t"] == 719
 
@@ -698,3 +698,57 @@ def test_redact_keeps_long_snake_case_metric_names():
     name = "promo_3_months_free_aug_to_oct_change_pct"
     assert redact(f"{name} = -59.34 %") == f"{name} = -59.34 %"
     assert redact("key Ab3dEf6hIj9kLm2nOp5qRs8tUv1wXy4zAb7dEf0hIj") == "key [скрыто]"
+
+
+def test_summary_names_web_search_pages_and_second_model_checks():
+    from strat.replay import summarize
+
+    items = [
+        {"tool": "Bash", "line": 'bin/strat search "отток подписки бенчмарк" --step research.q1.search.1'},
+        {"tool": "bash", "line": 'bin/strat search "churn paid ads cohort" --kind semantic'},
+        {"tool": "Bash", "line": "bin/strat read https://example.org/a --step research.q1.read.1"},
+        {"tool": "Bash", "line": "bin/strat read materials/metrics.xlsx --step intake.read.1"},
+        {"tool": "Bash", "line": "bin/strat consult challenge --step options.challenge"},
+        {"tool": "Bash", "line": "bin/strat judge support C001"},
+        {"tool": "WebSearch", "line": "веб-поиск: «x»"},
+    ]
+    assert summarize(items) == ("Выполнил 1 команду, искал в интернете 3 раза, открыл 1 страницу, "
+                                "сверился с другой моделью 2 раза")
+
+
+def _play_bundle(tmp_path, text):
+    bundle = {"version": 2, "runs": [{"id": "r", "model": "m", "harness": "opencode", "meta": {},
+                                      "events": [{"kind": "user", "text": "Вопрос", "t": 0},
+                                                 {"kind": "agent", "text": text, "t": 1}]}]}
+    page_path = tmp_path / "index.html"
+    shutil.copy(PAGE, page_path)
+    from strat.replay import embed
+
+    embed(page_path, bundle)
+    sync_playwright = _chromium()
+    with sync_playwright() as p:
+        try:
+            browser = p.chromium.launch()
+        except Exception as exc:
+            pytest.skip(f"no chromium: {exc}")
+        page = browser.new_page()
+        page.goto(page_path.as_uri() + "#speed=max&autoplay=1")
+        page.wait_for_selector("#chat[data-done='1']", timeout=20_000)
+        lists = page.eval_on_selector_all(
+            ".msg.agent ol", "els => els.map(e => [e.start, e.children.length])")
+        items = page.eval_on_selector_all(".msg.agent li", "els => els.map(e => e.innerText)")
+        browser.close()
+    return lists, items
+
+
+def test_a_loose_numbered_list_with_indented_lines_stays_one_list(tmp_path):
+    text = ("Уточните:\n\n1. **Охват:** для всех?  \n   *По умолчанию: для всех.*\n\n"
+            "2. **Метрика:** выручка?  \n   *По умолчанию: маржа.*\n\n3. **Тест:** да?\n\nСпасибо.")
+    lists, items = _play_bundle(tmp_path, text)
+    assert lists == [[1, 3]]
+    assert "По умолчанию: для всех." in items[0]
+
+
+def test_a_list_split_by_a_paragraph_keeps_its_numbers(tmp_path):
+    lists, _ = _play_bundle(tmp_path, "1. один\n2. два\n\nПояснение.\n\n3. три")
+    assert lists == [[1, 2], [3, 1]]
