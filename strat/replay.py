@@ -475,7 +475,7 @@ class Recorder:
                     return m.group(1)
         return ""
 
-    def finish(self, prices_known: bool, minutes: float | None = None) -> dict:
+    def finish(self, prices_known: bool) -> dict:
         events = self.events
         self.close_turn()
         if not events:
@@ -501,9 +501,7 @@ class Recorder:
                 total += ev["usd"]
         text, cwd = self.first_user or ("", None)
         meta = {
-            "date": start.date().isoformat(),
-            "start": start.isoformat(),
-            "minutes": minutes if minutes is not None else round(events[-1]["t"] / 60, 1),
+            "start": start.isoformat(),  # used by attach_web, removed before writing
             "usd": round(total, 4) if prices_known else None,
             "sessions": len(self.sessions),
             "gates": sum("gate" in e for e in events),
@@ -619,7 +617,6 @@ OC_NAMES = {"bash": "Bash", "read": "Read", "write": "Write", "edit": "Edit", "p
             "multiedit": "Edit", "grep": "Grep", "glob": "Glob", "list": "Glob",
             "webfetch": "WebFetch", "websearch": "WebSearch", "skill": "Skill",
             "todowrite": "TodoWrite", "task": "Task"}
-TIMES = re.compile(r"turn (\S+) rc=(-?\d+) secs=(\d+(?:\.\d+)?)")
 
 
 def turn_key(n: str) -> list:
@@ -652,27 +649,6 @@ def _oc_cwd(rows: list[dict]) -> str | None:
     return found.most_common(1)[0][0] if found else None
 
 
-IDLE_GAP = 15 * 60  # longer silence inside a turn: the machine slept or the run was paused
-
-
-def active_minutes(logs: dict[str, list[dict]], secs: dict[str, float]) -> float | None:
-    """Working time. Each turn counts its measured wall time (times.txt) or, without it, the span
-    of its events; silences longer than IDLE_GAP inside the turn, or after its last event, are
-    left out (a run that slept 90 minutes must not show 90 minutes of work)."""
-    total = 0.0
-    for n, rows in logs.items():
-        ts = sorted(d["timestamp"] / 1000 for d in rows if d.get("timestamp") is not None)
-        if not ts:
-            total += secs.get(n, 0.0)
-            continue
-        span = ts[-1] - ts[0]
-        idle = sum(b - a for a, b in zip(ts, ts[1:]) if b - a > IDLE_GAP)
-        wall = secs.get(n, span)
-        tail = wall - span
-        total += wall - idle - (tail if tail > IDLE_GAP else 0)
-    return round(total / 60, 1) if total else None
-
-
 def build_opencode(folder: Path, label: str | None = None, run_id: str | None = None,
                    model: str | None = None, case: str | None = None) -> dict:
     """One run from a folder of OpenCode `run --format json` turn logs."""
@@ -690,10 +666,6 @@ def build_opencode(folder: Path, label: str | None = None, run_id: str | None = 
                 continue
         logs[n] = rows
     cwd = _oc_cwd([d for rows in logs.values() for d in rows])
-    secs = {}
-    if (folder / "times.txt").is_file():
-        for m in TIMES.finditer((folder / "times.txt").read_text(encoding="utf-8")):
-            secs[m.group(1)] = float(m.group(3))
 
     def when(ms) -> datetime:
         return datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
@@ -737,8 +709,7 @@ def build_opencode(folder: Path, label: str | None = None, run_id: str | None = 
                 err = d.get("error") or {}
                 rec.error(str((err.get("data") or {}).get("message") or err.get("name") or
                               "ошибка"), ts, sid, cwd)
-    minutes = active_minutes(logs, secs)
-    run = rec.finish(prices_known=cost > 0, minutes=minutes)
+    run = rec.finish(prices_known=cost > 0)
     return _run(run, run_id, label, model or "", "opencode", case, tokens)
 
 
@@ -903,6 +874,7 @@ def export(case: str | None = None, transcripts: str | None = None, out: str | N
     if cdir:
         run.update(case_evidence(cdir, run["materials"]))
         attach_web(run, cdir)
+    run["meta"].pop("start", None)  # no run date or length is published
     target = Path(out) if out else root() / "demo" / "replay" / "script.json"
     bundle = put_run(load_bundle(target), run)
     embedded = write_bundle(target, bundle)
@@ -910,7 +882,7 @@ def export(case: str | None = None, transcripts: str | None = None, out: str | N
     usd = "no price" if m["usd"] is None else f"{m['usd']} usd (API list prices)"
     emit(f"wrote {target}: run {run['id']} ({run['harness']}, {run['model'] or 'model unknown'}): "
          f"{len(run['events'])} events, {m['steps']} steps, {m['gates']} gates, "
-         f"{m['minutes']} min, {usd}, {len(run.get('claims', []))} claims; bundle has {len(bundle['runs'])} runs"
+         f"{usd}, {len(run.get('claims', []))} claims; bundle has {len(bundle['runs'])} runs"
          + ("; embedded into index.html" if embedded else ""),
          {"out": str(target), "id": run["id"], "meta": m, "runs": [r["id"] for r in bundle["runs"]],
           "embedded": embedded}, as_json)

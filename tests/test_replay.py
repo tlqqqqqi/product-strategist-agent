@@ -119,8 +119,8 @@ def test_cost_tokens_and_meta(exported):
     # a group of steps carries the sum of its steps
     assert usd == [0, 0.6, 0.3, 0.2, 0, 0, 0, 0, 0.2]
     meta = run["meta"]
-    assert meta["usd"] == 1.3 and meta["date"] == "2026-11-15"
-    assert meta["minutes"] == 12.0 and meta["sessions"] == 2
+    assert meta["usd"] == 1.3 and meta["sessions"] == 2
+    assert not {"date", "start", "minutes"} & set(meta)  # no run date or length is published
     assert meta["steps"] == 6 and meta["gates"] == 1 and meta["priced"] is True
     assert meta["tokens"] == {"input": 150000, "output": 35000, "cache_read": 0}
 
@@ -156,7 +156,7 @@ def test_opencode_run_maps_turns_tools_and_tokens(opencode):
     meta = run["meta"]
     assert meta["tokens"] == {"input": 42286, "output": 929, "cache_read": 14976}
     assert meta["usd"] is None and meta["priced"] is False
-    assert meta["minutes"] == 2.0 and meta["steps"] == 10 and meta["gates"] == 1
+    assert "minutes" not in meta and meta["steps"] == 10 and meta["gates"] == 1
     assert ev[0]["t"] == 0 and ev[-1]["t"] == 603
 
 
@@ -795,14 +795,3 @@ def test_web_counts_come_from_the_case_log_by_time(tmp_path):
                                   "providers": ["brave", "exa"]}
 
 
-def test_active_minutes_leave_out_sleep_and_pauses():
-    """A turn that ran 2 min, slept 90 min, worked 1 more min and then hung until the timeout."""
-    from strat.replay import active_minutes
-
-    ms = 60_000
-    logs = {"1": [{"timestamp": 0}, {"timestamp": 2 * ms}, {"timestamp": 92 * ms},
-                  {"timestamp": 93 * ms}]}
-    assert active_minutes(logs, {"1": 93 * 60.0}) == 3.0
-    assert active_minutes(logs, {"1": 140 * 60.0}) == 3.0          # idle tail after the last event
-    assert active_minutes(logs, {"1": 95 * 60.0}) == 5.0           # a short tail is thinking time
-    assert active_minutes({"1": [{"timestamp": 0}, {"timestamp": 3 * ms}]}, {}) == 3.0
