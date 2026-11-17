@@ -8,7 +8,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Harness](https://img.shields.io/badge/harness-any-555)
-![Skills](https://img.shields.io/badge/skills-16-6f42c1)
+![Skills](https://img.shields.io/badge/skills-17-6f42c1)
 ![License](https://img.shields.io/badge/license-MIT-yellow)
 
 **[Живое демо](https://tlqqqqqi.github.io/product-strategist-agent/demo/replay/)** ·
@@ -127,7 +127,8 @@ flowchart TB
 | После решения | `review`, `revise` | что пора проверить, что устарело | на какие строки влияет изменённый факт |
 
 По ходу работы: интервью с пользователями (`interview`), аудио и видео (`media`), снимки
-экрана публичных страниц (`ux-capture`).
+экрана публичных страниц (`ux-capture`). Тексты для вас агент правит по `unslop`: русский формат чисел, без стрелок и
+внутренних ярлыков в предложениях.
 
 ## Что проверяет скрипт, а не модель
 
