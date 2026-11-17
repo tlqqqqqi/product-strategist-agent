@@ -96,4 +96,3 @@ answer a research question.
   did not know were checked by you.
 - After a persona session: «Это ответы модели, которая играет вымышленного пользователя, а не
   реального человека. Я использую их только как гипотезы для проверки на настоящих интервью.»
-  Plus the cost from the command output (`bin/strat cost` shows it by stage).

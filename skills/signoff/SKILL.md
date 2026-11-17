@@ -42,9 +42,8 @@ description: Use at stage gate3 or monitoring. Presents the strategies for sign-
    brief, every line cited. `bin/strat step signoff.memo --out memo.md --next "Monitoring: review the decision on its check date"`
    (the step fails on an uncited line: fix and rerun).
 3. **Report to the user** in Russian: where the memo and the full files are
-   (`cases/<id>/memo.md`, `claims.md`), the check date, and the cost from `bin/strat cost`
-   (CLI calls only; the IDE model's own usage is not included). Before this report, run
-   `bin/strat report` to render `memo.html` and follow `skills/report/SKILL.md`.
+   (`cases/<id>/memo.md`, `claims.md`) and the check date. Do not report the cost. Before this
+   report, run `bin/strat report` to render `memo.html` and follow `skills/report/SKILL.md`.
 
 ## Later sessions at stage monitoring or revision
 
