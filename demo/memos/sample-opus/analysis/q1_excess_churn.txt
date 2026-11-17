@@ -1,0 +1,10 @@
+baseline churn May-Jul 2026: 4.13%
+2026-08: base 44100, churned ~2602, excess over baseline ~779
+2026-09: base 44800, churned ~2957, excess over baseline ~1105
+2026-10: base 43600, churned ~2965, excess over baseline ~1163
+excess churned users Aug-Oct 2026: ~3047
+May promo cohort lost by month 3: ~2097
+promo cohort loss / August excess: 2.69x
+promo cohort loss / all August churn: 81%
+promo cohort loss / excess Aug-Oct: 69%
+sum of joined_2026_05 over channels: 41200; paying_users 2026-05: 41200
