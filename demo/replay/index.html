@@ -638,7 +638,11 @@ a.cite:hover { color: var(--accent-press); }
   }
   function play() {
     if (!pieces.length) return;
-    if (shown >= pieces.length) { clearChat(); }
+    if (shown >= pieces.length) {
+      // «Сначала»: start over visibly; at «Сразу» the whole run would reappear at once
+      clearChat(); chat.scrollTop = 0;
+      if (speedVal === "max") { speedVal = "1"; showSpeed(); }
+    }
     playing = true; closeCard(true); markCurrent(); update(); step();
   }
   function pause() {
