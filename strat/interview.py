@@ -206,7 +206,7 @@ def persona(persona_file: str, guide: str, step: str, case: str | None = None,
     name = _safe(pfile.stem.removeprefix("persona_"))
     if models.endpoint("peer") is None:
         hint = IMPORT_HINT.format(name=name)
-        warn(f"strat: no STRAT_PEER_API_KEY, so no outside model can play the respondent. "
+        warn(f"strat: no ANYMODEL_API_KEY, so no outside model can play the respondent. "
              f"{hint}.")
         emit(hint, {"status": "needs_agent", "by": "same-vendor", "persona": name,
                     "agent": "agents/persona.md", "questions": qs,

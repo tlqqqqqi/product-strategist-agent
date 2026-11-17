@@ -1,6 +1,8 @@
 """One OpenAI-compatible client for outside models: 120 s timeout, one retry, cost logged.
 
-A role (peer, jev, stt) is configured in .env as STRAT_<ROLE>_BASE_URL, _API_KEY and _MODEL.
+The AnyModel roles (peer, jev) share one key and endpoint, ANYMODEL_API_KEY and
+ANYMODEL_BASE_URL, and differ only by STRAT_<ROLE>_MODEL. Other roles (stt) are configured as
+STRAT_<ROLE>_BASE_URL, _API_KEY and _MODEL.
 Every call goes through `net.post`, so tests replace the network. Each call writes one log line
 with its tokens and price (config/routes.yaml, `models:`), failed calls included. The key is
 sent in the Authorization header only; it is never printed or logged.
@@ -29,14 +31,22 @@ class Endpoint:
     model: str
 
 
+ANYMODEL_ROLES = ("peer", "jev")
+
+
+def key_name(role: str) -> str:
+    """The .env name of the key a role needs."""
+    return "ANYMODEL_API_KEY" if role in ANYMODEL_ROLES else f"STRAT_{role.upper()}_API_KEY"
+
+
 def endpoint(role: str) -> Endpoint | None:
     """The configured endpoint for a role, or None when it has no key."""
-    prefix = f"STRAT_{role.upper()}_"
+    prefix = "ANYMODEL_" if role in ANYMODEL_ROLES else f"STRAT_{role.upper()}_"
     key = env(prefix + "API_KEY")
     if not key:
         return None
     return Endpoint(role, (env(prefix + "BASE_URL") or DEFAULT_BASE_URL).rstrip("/"), key,
-                    env(prefix + "MODEL"))
+                    env(f"STRAT_{role.upper()}_MODEL"))
 
 
 def _conf() -> dict:
@@ -120,7 +130,7 @@ def chat(role: str, messages: list[dict], *, cdir: Path | None = None, step: str
     tokens_out, usd. Raises net.HttpError when the role has no key or the call fails."""
     ep = endpoint(role)
     if ep is None:
-        raise net.HttpError(f"no STRAT_{role.upper()}_API_KEY")
+        raise net.HttpError(f"no {key_name(role)}")
     model = model or ep.model
     if not model:
         raise net.HttpError(f"no model for {role}: set STRAT_{role.upper()}_MODEL")

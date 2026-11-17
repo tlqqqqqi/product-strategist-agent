@@ -8,8 +8,8 @@ import pytest
 from strat import models, net
 from strat.core import read_jsonl
 
-KEYS = ("STRAT_JEV_API_KEY", "STRAT_JEV_BASE_URL", "STRAT_JEV_MODEL", "STRAT_PEER_API_KEY",
-        "STRAT_PEER_BASE_URL", "STRAT_PEER_MODEL")
+KEYS = ("ANYMODEL_API_KEY", "ANYMODEL_BASE_URL", "STRAT_JEV_MODEL", "STRAT_PEER_MODEL",
+        "STRAT_PEER_API_KEY", "STRAT_JEV_API_KEY")
 
 CHAT_OK = {"choices": [{"index": 0, "message": {"role": "assistant", "content": "ANSWER: yes"}}],
            "usage": {"prompt_tokens": 1000, "completion_tokens": 10}}
@@ -19,8 +19,8 @@ CHAT_OK = {"choices": [{"index": 0, "message": {"role": "assistant", "content": 
 def peer(cases, monkeypatch):
     for k in KEYS:
         monkeypatch.delenv(k, raising=False)
-    monkeypatch.setenv("STRAT_PEER_API_KEY", "peer-key")
-    monkeypatch.setenv("STRAT_PEER_BASE_URL", "https://example.test/v1")
+    monkeypatch.setenv("ANYMODEL_API_KEY", "peer-key")
+    monkeypatch.setenv("ANYMODEL_BASE_URL", "https://example.test/v1")
     monkeypatch.setenv("STRAT_PEER_MODEL", "vendor/cheap-model")
     monkeypatch.setattr(models, "RETRY_PAUSE", 0)
 
@@ -104,3 +104,23 @@ def test_no_key_means_no_endpoint(cases, monkeypatch):
     for k in KEYS:
         monkeypatch.delenv(k, raising=False)
     assert models.endpoint("jev") is None and models.endpoint("peer") is None
+
+
+def test_one_anymodel_key_serves_peer_and_jev_with_their_own_models(cases, monkeypatch):
+    for k in KEYS:
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("ANYMODEL_API_KEY", "one-key")
+    monkeypatch.setenv("STRAT_PEER_MODEL", "vendor/strong-model")
+    monkeypatch.setenv("STRAT_JEV_MODEL", "jev/jev-1.14.0")
+    peer, jev = models.endpoint("peer"), models.endpoint("jev")
+    assert peer.key == jev.key == "one-key"
+    assert peer.base_url == jev.base_url == "https://anymodel.org/v1"
+    assert (peer.model, jev.model) == ("vendor/strong-model", "jev/jev-1.14.0")
+
+
+def test_old_per_role_anymodel_keys_are_not_read(cases, monkeypatch):
+    for k in KEYS:
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("STRAT_PEER_API_KEY", "old-key")
+    monkeypatch.setenv("STRAT_JEV_API_KEY", "old-key")
+    assert models.endpoint("peer") is None and models.endpoint("jev") is None

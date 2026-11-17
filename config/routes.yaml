@@ -38,7 +38,7 @@ models:
   default_usd_per_mtok: 2.00
 
 # strat judge: typed questions (type, support, contradiction, sufficient).
-# Order: Jev (STRAT_JEV_*), then a cheap chat model on the peer endpoint (STRAT_PEER_*) with a
+# Order: Jev (STRAT_JEV_MODEL), then a cheap chat model on the same AnyModel key with a
 # fixed answer format, then the IDE agent itself (exit 3, the answer is stored with by=agent).
 judge:
   # Jev model: jev/jev-1.14.0, pinned so verdicts do not move between runs. Chosen over
@@ -97,7 +97,7 @@ consult:
   max_tokens: 6000          # room for reasoning plus up to 10 objections
 
 # strat interview persona: a model respondent plays an invented persona through a guide, one
-# chat call per question on the peer endpoint (STRAT_PEER_*). Output is always synthetic.
+# chat call per question with ANYMODEL_API_KEY. Output is always synthetic.
 persona:
   # A different vendor from the IDE agent, so the respondent does not share the analyst's
   # habits; GLM-5 answers in natural Russian and costs x0.5 in AnyModel's catalog (2026-11-14).

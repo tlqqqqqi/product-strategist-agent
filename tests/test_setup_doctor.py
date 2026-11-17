@@ -46,7 +46,7 @@ def test_doctor_lists_capabilities_without_keys(strat, root):
 
 
 def test_doctor_reads_keys_from_env_file_and_never_prints_values(strat, root):
-    (root / ".env").write_text("TAVILY_API_KEY=secret-tav-123\nSTRAT_PEER_API_KEY=secret-peer-9\n",
+    (root / ".env").write_text("TAVILY_API_KEY=secret-tav-123\nANYMODEL_API_KEY=secret-peer-9\n",
                                encoding="utf-8")
     text = strat("doctor")
     data = by_name(strat("doctor", "--json").data)
@@ -56,7 +56,7 @@ def test_doctor_reads_keys_from_env_file_and_never_prints_values(strat, root):
     assert "TAVILY_API_KEY" in data["web search"]["detail"]
     assert "cx/gpt-6.1-sol" in data["challenger"]["detail"]
     assert data["judge"]["available"] is True
-    assert "ds/deepseek-v4-flash" in data["judge"]["detail"]
+    assert "jev" in data["judge"]["detail"] and "ANYMODEL_API_KEY" in data["judge"]["detail"]
 
 
 def test_setup_creates_env_once_and_lists_empty_keys(strat, root):

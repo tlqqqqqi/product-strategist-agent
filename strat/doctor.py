@@ -76,19 +76,18 @@ def checks() -> list[dict]:
         "no BRAVE_API_KEY, TAVILY_API_KEY or EXA_API_KEY in .env; the agent uses the IDE's "
         "own web search")
 
-    peer = bool(env("STRAT_PEER_API_KEY"))
+    anymodel = bool(env("ANYMODEL_API_KEY"))
     peer_model = env("STRAT_PEER_MODEL") or _conf("routes").get("consult", {}).get("model", "")
     add("challenger", True,
-        f"peer model {peer_model} (STRAT_PEER_API_KEY set)" if peer else
-        "no STRAT_PEER_API_KEY; the challenger runs as a native subagent, marked same-vendor")
+        f"peer model {peer_model} (ANYMODEL_API_KEY set)" if anymodel else
+        "no ANYMODEL_API_KEY; the challenger runs as a native subagent, marked same-vendor")
 
-    if env("STRAT_JEV_API_KEY"):
-        add("judge", True, f"jev ({env('STRAT_JEV_MODEL') or 'jev'}, STRAT_JEV_API_KEY set)")
-    elif peer:
+    if anymodel:
+        jev = env("STRAT_JEV_MODEL") or _conf("routes").get("judge", {}).get("jev_model", "jev")
         chat = _conf("routes").get("judge", {}).get("chat_model") or peer_model
-        add("judge", True, f"chat model {chat} on the peer endpoint (STRAT_PEER_API_KEY set)")
+        add("judge", True, f"jev ({jev}), else chat model {chat} (ANYMODEL_API_KEY set)")
     else:
-        add("judge", True, "no STRAT_JEV_API_KEY or STRAT_PEER_API_KEY; the IDE agent answers")
+        add("judge", True, "no ANYMODEL_API_KEY; the IDE agent answers")
 
     if env("STRAT_STT_API_KEY"):
         add("speech to text", True,

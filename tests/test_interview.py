@@ -21,8 +21,8 @@ BANNER_START = "> ВНИМАНИЕ: это имитация"
 
 @pytest.fixture
 def peer(monkeypatch):
-    monkeypatch.setenv("STRAT_PEER_API_KEY", "peer-key")
-    monkeypatch.setenv("STRAT_PEER_BASE_URL", "https://example.test/v1")
+    monkeypatch.setenv("ANYMODEL_API_KEY", "peer-key")
+    monkeypatch.setenv("ANYMODEL_BASE_URL", "https://example.test/v1")
     monkeypatch.setenv("STRAT_PEER_MODEL", "vendor/strong-model")
     monkeypatch.setattr(models, "RETRY_PAUSE", 0)
 

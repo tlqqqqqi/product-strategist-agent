@@ -5,7 +5,7 @@ description: Use before Gate 1 (consult variants) and before Gate 2 (consult cha
 
 # Challenge
 
-The challenger is a strong model from another vendor (the peer model, `STRAT_PEER_*`). It sees
+The challenger is a strong model from another vendor (the peer model: `ANYMODEL_API_KEY`, `STRAT_PEER_MODEL`). It sees
 the case files only, never this conversation, so it cannot be talked into agreeing. Its
 objections go to `objections.jsonl`; the gate check fails while any of them has no verdict.
 

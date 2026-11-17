@@ -29,9 +29,9 @@ def cases(tmp_path, monkeypatch):
     d.mkdir()
     monkeypatch.setenv("STRAT_CASES", str(d))
     monkeypatch.setenv("STRAT_TODAY", "2026-11-15")
-    for key in ("BRAVE_API_KEY", "TAVILY_API_KEY", "EXA_API_KEY", "STRAT_JEV_API_KEY",
-                "STRAT_JEV_BASE_URL", "STRAT_JEV_MODEL", "STRAT_PEER_API_KEY",
-                "STRAT_PEER_BASE_URL", "STRAT_PEER_MODEL", "STRAT_STT_API_KEY",
+    for key in ("BRAVE_API_KEY", "TAVILY_API_KEY", "EXA_API_KEY", "ANYMODEL_API_KEY",
+                "ANYMODEL_BASE_URL", "STRAT_JEV_MODEL",
+                "STRAT_PEER_MODEL", "STRAT_STT_API_KEY",
                 "STRAT_STT_BASE_URL", "STRAT_STT_MODEL"):
         monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv("STRAT_ENV_FILE", str(tmp_path / "no.env"))  # never the real .env

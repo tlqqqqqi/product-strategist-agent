@@ -1,8 +1,7 @@
 """The challenger (a peer model from another vendor), verdicts and the capped debate.
 
 `strat consult variants|challenge` sends case FILES only (brief, table, options; plus claims.md
-for `challenge`), never the conversation, to the peer model (STRAT_PEER_*, through
-models.chat). The model is STRAT_PEER_MODEL, else `consult.model` in config/routes.yaml. It
+for `challenge`), never the conversation, to the peer model (ANYMODEL_API_KEY, through models.chat). The model is STRAT_PEER_MODEL, else `consult.model` in config/routes.yaml. It
 answers in a fixed JSON shape; each objection is appended to objections.jsonl as
 {id, call, target, severity, text, claims, verdict: null, reason: null, debate: [], by, model}.
 
@@ -249,7 +248,7 @@ def consult(call: str, case: str | None = None, objection_id: str | None = None,
     how = f"bin/strat consult {call}"
     if models.endpoint("peer") is None:
         return _to_subagent(f"the files {files} of this case and the task below", how,
-                            payload, "no STRAT_PEER_API_KEY", as_json)
+                            payload, "no ANYMODEL_API_KEY", as_json)
     if not _peer_model():
         raise StratError("no challenger model: set STRAT_PEER_MODEL or consult.model in "
                          "config/routes.yaml")
@@ -434,7 +433,7 @@ def debate(objection_id: str, case: str | None = None, from_file: str | None = N
         how = f"bin/strat debate {objection_id}"
         if models.endpoint("peer") is None:
             return _to_subagent("the task and data below", how, payload,
-                                "no STRAT_PEER_API_KEY", as_json)
+                                "no ANYMODEL_API_KEY", as_json)
         try:
             r = models.chat("peer", [{"role": "system", "content": f"{DEBATE_TASK}\n{DATA_RULE}"},
                                      {"role": "user", "content": packet}],

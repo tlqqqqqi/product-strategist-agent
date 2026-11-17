@@ -212,8 +212,8 @@ def judge(question: str, case: str | None = None, claim: str | None = None,
     state = _state(question, c, o, index)
     conf = load_config("routes").get("judge", {})
     tried = []
-    for name, ask, key in (("jev", _ask_jev, "STRAT_JEV_API_KEY"),
-                           ("peer", _ask_chat, "STRAT_PEER_API_KEY")):
+    for name, ask, key in (("jev", _ask_jev, "ANYMODEL_API_KEY"),
+                           ("peer", _ask_chat, "ANYMODEL_API_KEY")):
         if models.endpoint(name) is None:
             tried.append(f"{name}: no {key}")
             continue

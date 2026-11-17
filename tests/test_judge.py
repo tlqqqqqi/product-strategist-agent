@@ -8,8 +8,8 @@ import pytest
 from strat import models, net
 from strat.core import read_jsonl
 
-KEYS = ("STRAT_JEV_API_KEY", "STRAT_JEV_BASE_URL", "STRAT_JEV_MODEL", "STRAT_PEER_API_KEY",
-        "STRAT_PEER_BASE_URL", "STRAT_PEER_MODEL")
+KEYS = ("ANYMODEL_API_KEY", "ANYMODEL_BASE_URL", "STRAT_JEV_MODEL",
+        "STRAT_PEER_MODEL")
 PRICE = "Семейный тариф: 2 ТБ на 5 человек — 299 ₽ в месяц."
 
 
@@ -31,15 +31,15 @@ def claim(strat, case, monkeypatch):
 
 @pytest.fixture
 def jev(monkeypatch):
-    monkeypatch.setenv("STRAT_JEV_API_KEY", "jev-key")
-    monkeypatch.setenv("STRAT_JEV_BASE_URL", "https://example.test/v1")
+    monkeypatch.setenv("ANYMODEL_API_KEY", "jev-key")
+    monkeypatch.setenv("ANYMODEL_BASE_URL", "https://example.test/v1")
     monkeypatch.setenv("STRAT_JEV_MODEL", "jev/jev-1.14.0")
 
 
 @pytest.fixture
 def peer(monkeypatch):
-    monkeypatch.setenv("STRAT_PEER_API_KEY", "peer-key")
-    monkeypatch.setenv("STRAT_PEER_BASE_URL", "https://example.test/v1")
+    monkeypatch.setenv("ANYMODEL_API_KEY", "peer-key")
+    monkeypatch.setenv("ANYMODEL_BASE_URL", "https://example.test/v1")
     monkeypatch.setenv("STRAT_PEER_MODEL", "vendor/cheap-model")
 
 
@@ -106,19 +106,21 @@ def test_low_confidence_escalates_with_exit_3_and_is_logged(strat, case, claim, 
     assert check["judgments"][-1]["escalated"] is True
 
 
-def test_without_jev_key_the_peer_chat_model_answers(strat, case, claim, peer, post):
+def test_when_jev_is_down_the_peer_chat_model_answers(strat, case, claim, peer, post):
     replies, calls = post
+    replies["systemone"] = [net.HttpError("HTTP 503", status=503)]
     replies["chat/completions"] = [chat_reply("ANSWER: yes")]
     r = strat("judge", "support", "--claim", "C001", "--json")
     assert r.code == 0, r.err
     assert r.data["by"] == "peer" and r.data["answer"] == "yes" and r.data["p"] is None
-    assert calls[0]["url"].endswith("/chat/completions")
-    assert "ANSWER:" in calls[0]["body"]["messages"][0]["content"]
+    chat = [c for c in calls if c["url"].endswith("/chat/completions")]
+    assert "ANSWER:" in chat[0]["body"]["messages"][0]["content"]
     assert stored(case)["by"] == "peer"
 
 
 def test_peer_unsure_escalates(strat, case, claim, peer, post):
     replies, _ = post
+    replies["systemone"] = [net.HttpError("HTTP 503", status=503)]
     replies["chat/completions"] = [chat_reply("ANSWER: unsure")]
     r = strat("judge", "contradiction", "--claim", "C001", "--other", "C002")
     assert r.code == 3 and "unsure" in r.err

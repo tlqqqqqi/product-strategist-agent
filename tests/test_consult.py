@@ -9,7 +9,7 @@ from strat import models, net
 from strat.core import read_json, read_jsonl, write_json
 from test_validate import ready, research  # noqa: F401  (ready: a case whose Gate 1 files and claims pass)
 
-KEYS = ("STRAT_PEER_API_KEY", "STRAT_PEER_BASE_URL", "STRAT_PEER_MODEL")
+KEYS = ("ANYMODEL_API_KEY", "ANYMODEL_BASE_URL", "STRAT_PEER_MODEL")
 
 
 def chat(content):
@@ -32,8 +32,8 @@ OBJECTIONS = {"objections": [
 @pytest.fixture
 def peer(monkeypatch):
     monkeypatch.setattr(models, "RETRY_PAUSE", 0)
-    monkeypatch.setenv("STRAT_PEER_API_KEY", "peer-key")
-    monkeypatch.setenv("STRAT_PEER_BASE_URL", "https://example.test/v1")
+    monkeypatch.setenv("ANYMODEL_API_KEY", "peer-key")
+    monkeypatch.setenv("ANYMODEL_BASE_URL", "https://example.test/v1")
     monkeypatch.setenv("STRAT_PEER_MODEL", "vendor/strong-model")
 
 
