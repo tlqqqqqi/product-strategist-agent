@@ -214,7 +214,7 @@ WHERE = re.compile(r"где искать:\s*([^;\[]*)", re.I)
 THEME = re.compile(r"тема:\s*([^;\[]*)", re.I)
 WEB = re.compile(r"веб|web|интернет|сайт|https?://|страниц", re.I)
 OPTION = re.compile(r"^#{2,4}\s*Вариант\s+\d+", re.M)
-FLOOR = {"web_questions": 4, "themes": 3, "searches": 4, "kinds": 2, "pages": 4,
+FLOOR = {"web_questions": 4, "themes": 3, "searches": 4, "kinds": 2, "semantic": 2, "pages": 4,
          "web_facts": 8, "web_sites": 5, "options_gate1": 3, "options_gate2": 4}
 
 
@@ -248,13 +248,15 @@ def research_tally(cdir: Path) -> dict[int, dict]:
         if not m:
             continue
         t = tally.setdefault(int(m.group(1)), {"searches": 0, "failed": 0, "kinds": set(),
-                                                "pages": set()})
+                                                "semantic": 0, "pages": set()})
         if row.get("tool") == "search" and row.get("status") in ("ok", "error"):
             t["searches"] += 1
             if row["status"] == "error":
                 t["failed"] += 1
             elif row.get("out") and (cdir / row["out"]).is_file():
-                t["kinds"].add(read_json_safe(cdir / row["out"]).get("kind"))
+                kind = read_json_safe(cdir / row["out"]).get("kind")
+                t["kinds"].add(kind)
+                t["semantic"] += kind == "semantic"
         elif row.get("tool") == "read" and row.get("status") == "ok" and row.get("ref"):
             t["pages"].add(row["ref"])
     return tally
@@ -293,7 +295,7 @@ def web_errors(cdir: Path, n: int) -> list[str]:
         return errors
     tally = research_tally(cdir)
     for q in sorted(qs):
-        t = tally.get(q, {"searches": 0, "failed": 0, "kinds": set(), "pages": set()})
+        t = tally.get(q, {"searches": 0, "failed": 0, "kinds": set(), "semantic": 0, "pages": set()})
         if t["searches"] and t["failed"] == t["searches"]:
             continue  # every provider failed each time: the question ends as a gap
         short = []
@@ -301,13 +303,15 @@ def web_errors(cdir: Path, n: int) -> list[str]:
             short.append(f"{t['searches']}/{FLOOR['searches']} searches")
         if len(t["kinds"] - {None}) < FLOOR["kinds"]:
             short.append(f"{len(t['kinds'] - {None})}/{FLOOR['kinds']} search kinds")
+        if t["semantic"] < FLOOR["semantic"]:
+            short.append(f"{t['semantic']}/{FLOOR['semantic']} semantic searches")
         if len(t["pages"]) < FLOOR["pages"]:
             short.append(f"{len(t['pages'])}/{FLOOR['pages']} saved pages")
         if short:
             errors.append(
                 f"plan.md: Q{q} (web) is researched too narrowly: {', '.join(short)}; run more "
                 f"`bin/strat search` queries (step research.q{q}.search.<k>, different "
-                f"--kind) and save the pages you use (`bin/strat read <url> --step "
+                f"--kind, at least {FLOOR['semantic']} with --kind semantic) and save the pages you use (`bin/strat read <url> --step "
                 f"research.q{q}.read.<k>`)")
     srcs = {s["id"]: s for s in sources.index(cdir)}
     web_facts = [c for c in ledger.load(cdir) if c["type"] == "fact"

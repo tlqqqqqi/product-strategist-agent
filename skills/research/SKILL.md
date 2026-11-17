@@ -20,11 +20,13 @@ is used anywhere. Read `knowledge/claims.md` if you have not in this session.
    Then save every page you use: `bin/strat read <url> --step research.q<N>.read.<k>`. Quote
    from the saved snapshot, never from a search snippet or a tool summary.
    Work every web question in rounds, as in
-   `skills/research/references/research-themes.md`: decompose it, search broadly with
-   different `--kind`s, read what you saved, then search again with the names, terms and
+   `skills/research/references/research-themes.md`: decompose it, open with a
+   `--kind semantic` search (the question in plain words; it finds the most on-topic pages),
+   search broadly with different `--kind`s, read what you saved, then search again with the names, terms and
    numbers you found, and look for a source that disagrees. Do this even when the materials
    seem to answer the question: the web says what is normal and what changed outside. Gate 2
-   counts per web question at least 4 searches over 2 kinds and 4 saved pages, and for the
+   counts per web question at least 4 searches over 2 kinds, at least 2 of them semantic,
+   and 4 saved pages, and for the
    case at least 8 facts quoted from web pages of at least 5 sites. Nothing useful found after
    that: say so in a `gap` claim.
 3. Public product flows (tariff pages, sign-up screens up to the form): screenshots with

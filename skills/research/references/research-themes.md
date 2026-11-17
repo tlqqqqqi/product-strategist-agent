@@ -30,6 +30,6 @@ Write each in plan.md as `тема: <theme>; где искать: веб, <what 
 4. **Stop** when a new search brings nothing new for two queries in a row, or the answer can no
    longer change the ranking. What stays unknown becomes a `gap` claim.
 
-The Gate 2 check counts per web question at least 4 searches over at least 2 kinds and at least
-4 saved pages, and for the case at least 8 facts quoted from web pages of at least 5 different
+The Gate 2 check counts per web question at least 4 searches over at least 2 kinds (at least 2
+of them `--kind semantic`) and at least 4 saved pages, and for the case at least 8 facts quoted from web pages of at least 5 different
 sites. These are floors: a case where the answer is contested deserves more.

@@ -405,6 +405,20 @@ def test_one_kind_of_search_is_not_enough(strat, ready):
     assert "0/4 saved pages" in r.err
 
 
+def test_two_semantic_searches_per_web_question(strat, ready):
+    to_gate2(strat, ready)
+    research(strat, ready)
+    for k, kind in zip(range(5, 9), ("keyword", "text", "keyword", "semantic")):
+        searched(ready, 6, k, kind=kind)
+        saved_page(ready, 6, k, f"other{k}.ru")
+    edit(ready, "plan.md", "- [ ] Q5", "- [ ] Q6 Ещё вопрос - ячейка: x; тема: рынок; "
+         "где искать: веб, новости [C003]\n- [ ] Q5")
+    r = strat("gate", "check", "2")
+    assert r.code == 1 and "Q6 (web)" in r.err and "1/2 semantic searches" in r.err
+    searched(ready, 6, 9, kind="semantic")
+    assert strat("gate", "check", "2").code == 0, strat("gate", "check", "2").err
+
+
 def test_gate2_needs_many_web_facts_from_many_sites(strat, ready):
     to_gate2(strat, ready)
     research(strat, ready, facts=5)

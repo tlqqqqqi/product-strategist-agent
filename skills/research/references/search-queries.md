@@ -18,7 +18,8 @@ chosen by kind in `config/routes.yaml`; if it fails, the next one answers.
 
 - `keyword` (default): a name, a tariff, a price, an exact term - "<конкурент> тариф семейный цена 2026".
 - `text`: you need the numbers or the passage in the snippet - market size, a benchmark, a law.
-- `semantic`: a question in plain words, when you do not know the terms - "почему пользователи
+- `semantic`: a question in plain words. Open every web question with one, and use it whenever
+  you do not know the terms; Gate 2 needs at least 2 per web question - "почему пользователи
   отказываются от платного облака". Expect some results in English; they are still sources.
 
 Exit 2 means no provider could answer (no key, or all failed): do not retry the same command;
