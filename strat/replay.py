@@ -386,6 +386,9 @@ CASE_NEW = re.compile(r"strat new ([\w-]+)")
 CASE_PATH = re.compile(r"cases/([\w-]+)/")
 
 
+TYPED_CALL = re.compile(r"<function_call>|(?:Tool|Assistant):\s*<function_response>|<function_response>")
+
+
 class Recorder:
     """Collects the flat events of one run and turns them into a v2 run."""
 
@@ -424,8 +427,13 @@ class Recorder:
         self.add({"kind": "user", "text": text}, ts, session)
 
     def agent(self, text: str, ts: datetime, session: str, cwd: str | None) -> None:
-        self.last_agent = self.add({"kind": "agent", "text": redact(text.strip(), cwd)}, ts,
-                                   session)
+        # a model that fails its harness's tool format sometimes types the calls and invented
+        # results as text; they never ran, so the message ends where that markup starts
+        cut = TYPED_CALL.search(text)
+        text = (text[:cut.start()] if cut else text).strip()
+        if not text:
+            return
+        self.last_agent = self.add({"kind": "agent", "text": redact(text, cwd)}, ts, session)
 
     def step(self, tool: str, name: str, inp: dict, ts: datetime, session: str,
              cwd: str | None) -> tuple:

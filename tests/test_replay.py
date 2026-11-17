@@ -795,3 +795,15 @@ def test_web_counts_come_from_the_case_log_by_time(tmp_path):
                                   "providers": ["brave", "exa"]}
 
 
+
+
+def test_tool_call_markup_a_model_typed_as_text_is_cut_from_its_message():
+    from strat.replay import Recorder
+    from datetime import datetime, timezone
+    rec = Recorder()
+    ts = datetime(2026, 11, 16, tzinfo=timezone.utc)
+    rec.agent("Попробую иначе.<function_call>\n{\"name\":\"bash\"}\n</function_call>\n"
+              "Tool: <function_response>\nok\n</function_response>", ts, "s", None)
+    rec.agent("Tool: <function_response>\nx\n</function_response>", ts, "s", None)
+    texts = [e["text"] for e in rec.events if e["kind"] == "agent"]
+    assert texts == ["Попробую иначе."]
