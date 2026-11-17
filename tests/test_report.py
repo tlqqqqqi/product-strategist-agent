@@ -794,3 +794,22 @@ def test_a_long_tile_value_wraps_in_a_capped_column_with_a_smaller_font(strat, n
     doc = parse(neg_case / "memo.html")
     assert "fit-content" in style_for(doc.style, "figs")  # the value column is capped
     assert "nowrap" not in style_for(doc.style, "long")
+
+
+def test_report_refuses_decimal_points_and_arrows_in_memo_prose(strat, memo_case):
+    bad = MEMO.replace("- Данных об отказах на оплате нет [C003].",
+                       "- Отток 7.6 % → стоп, если m1 < 60% [C003].")
+    (memo_case / "memo.md").write_text(bad, encoding="utf-8")
+    r = strat("report")
+    assert r.code != 0
+    assert "7.6" in r.err and "→" in r.err and "<" in r.err
+    assert "skills/unslop" in r.err
+
+
+def test_report_allows_dates_versions_and_symbols_inside_blocks(strat, neg_case):
+    text = with_blocks(NEG_TILES.replace("- ARPU в октябре: 334 ₽", "- ARPU в октябре → ноябре: 334 ₽"))
+    text = text.replace("- Данных об отказах на оплате нет [C003].",
+                        "- Данных об отказах нет до 10.12.2026, модель jev-1.14.0 [C003].")
+    (neg_case / "memo.md").write_text(text, encoding="utf-8")
+    r = strat("report")
+    assert r.code == 0, r.err

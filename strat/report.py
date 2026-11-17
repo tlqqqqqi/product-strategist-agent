@@ -778,6 +778,29 @@ def render(cdir: Path, memo: str) -> tuple[str, int]:
     return page, len(ids)
 
 
+DECIMAL_POINT = re.compile(r"(?<![\d.\w-])\d+\.\d+(?![\d.\w])")
+SYMBOLS = re.compile(r"→|->|≥|≤|<=|>=|(?<=\s)[<>](?=\s?\d)")
+
+
+def prose_errors(text: str) -> list[str]:
+    """Rules 34 and 35 of skills/unslop: no decimal point and no arrows or comparison symbols in
+    the memo's sentences. Fenced blocks, tables and inline code are left alone."""
+    errors, fenced = [], False
+    for n, line in enumerate(text.splitlines(), 1):
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+            continue
+        if fenced or line.lstrip().startswith("|"):
+            continue
+        plain = re.sub(r"`[^`]*`|\[C\d+(?:,\s*C\d+)*\]", "", line)
+        found = DECIMAL_POINT.findall(plain) + SYMBOLS.findall(plain)
+        if found:
+            errors.append(f"memo.md:{n}: {', '.join(dict.fromkeys(found))} in a sentence: write "
+                          "numbers with a decimal comma and comparisons in words "
+                          "(skills/unslop/SKILL.md, rules 34-35)")
+    return errors
+
+
 def report(case: str | None = None, as_json: bool = False) -> int:
     """Check memo.md citations, then render memo.html next to it."""
     cdir = case_path(case)
@@ -789,6 +812,7 @@ def report(case: str | None = None, as_json: bool = False) -> int:
     index, life = ledger.by_id(claims), ledger.shelf_life()
     errors = validate.citation_errors(cdir, "memo.md", index, life)
     errors += decision_errors(decision_rows(cdir), index, life)
+    errors += prose_errors(memo_path.read_text(encoding="utf-8"))
     if errors:
         for e in errors:
             print(e, file=sys.stderr)
