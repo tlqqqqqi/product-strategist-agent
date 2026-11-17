@@ -300,6 +300,9 @@ def _line(block: blocks.Block, claims: dict) -> str:
             f'grid-template-columns:repeat({n},minmax(0,1fr))">{labels}</ol>')
 
 
+LONG_FIGURE = 12  # characters; a longer figure wraps in a smaller font instead of crowding the label
+
+
 def _tiles(block: blocks.Block, claims: dict) -> str:
     """Key figures as rows: the figure, the sentence with its citations, a muted note."""
     rows = []
@@ -307,8 +310,9 @@ def _tiles(block: blocks.Block, claims: dict) -> str:
         cls = " focal" if r.focal else ""
         sign = sign_of(r.shown[0])
         note = f'<small class="fig-n">{esc(r.note)}</small>' if r.note else ""
+        long = " long" if len(_shown(r.shown[0]) + (r.unit or block.unit or "")) > LONG_FIGURE else ""
         rows.append(f'<div class="fig{cls}"{types_of(r.ids, claims)}>'
-                    f'<div class="fig-v num{" " + sign if sign else ""}">'
+                    f'<div class="fig-v num{" " + sign if sign else ""}{long}">'
                     f'{_value_link(r, 0, r.unit or block.unit)}</div>'
                     f'<div class="fig-t"><span class="fig-l">{esc(r.label)}</span>'
                     f'{cite_html(r.ids, claims)}{note}</div></div>')

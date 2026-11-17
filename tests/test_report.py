@@ -782,3 +782,15 @@ def test_line_needs_four_points_and_labels_its_axis(strat, case):
     from strat import report
     html = report._line(blocks.blocks_in(four.splitlines())[0], {})
     assert html.count('class="blk-tick"') >= 3 and ">5%<" in html
+
+
+def test_a_long_tile_value_wraps_in_a_capped_column_with_a_smaller_font(strat, neg_case):
+    tiles = NEG_TILES.replace("−59,34 %", "−59,34 % платящих после акции против прошлого года")
+    (neg_case / "memo.md").write_text(with_blocks(tiles), encoding="utf-8")
+    r = strat("report")
+    assert r.code == 0, r.err
+    values = classes(block_html(neg_case)).with_class("fig-v")
+    assert ["long" in v[1]["class"].split() for v in values] == [True, False, False]
+    doc = parse(neg_case / "memo.html")
+    assert "fit-content" in style_for(doc.style, "figs")  # the value column is capped
+    assert "nowrap" not in style_for(doc.style, "long")
