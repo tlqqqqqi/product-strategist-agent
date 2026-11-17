@@ -1,0 +1,17 @@
+INPUT S001 sha256=f3a7b58fcba8
+FIGURE m1_organic_before_v2 = 89.99 % | period 2026-01..2026-04
+FIGURE m1_organic_after_v2 = 88.96 % | period 2026-05..2026-09
+FIGURE m1_organic_after = 88.96 % | period 2026-05..2026-09
+FIGURE m1_organic_before = 89.99 % | period 2026-01..2026-04
+FIGURE m1_organic_change_pp = -1.03 p.p. | period 2026-01..2026-09
+FIGURE m1_referral_before_v2 = 91.91 % | period 2026-01..2026-04
+FIGURE m1_referral_after_v2 = 91.59 % | period 2026-05..2026-09
+FIGURE m1_referral_after = 91.59 % | period 2026-05..2026-09
+FIGURE m1_referral_before = 91.91 % | period 2026-01..2026-04
+FIGURE m1_referral_change_pp = -0.32 p.p. | period 2026-01..2026-09
+GAP cohorts!D26 (retained_m1, month=2026-06) is empty
+FIGURE m1_operator_bundle_before_v2 = 94.11 % | period 2026-01..2026-04
+FIGURE m1_operator_bundle_after_v2 = 94.02 % | period 2026-05..2026-09
+FIGURE m1_operator_bundle_after = 94.02 % | period 2026-05..2026-09
+FIGURE m1_operator_bundle_before = 94.11 % | period 2026-01..2026-04
+FIGURE m1_operator_bundle_change_pp = -0.09 p.p. | period 2026-01..2026-09

@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Падение удержания «Семейного компаса» — вариант 6, гибрид</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geologica:wght@300..600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+/* Tokens from DESIGN.md, defined once. Light only: a dark theme is not designed. */
+:root {
+  --page: #F5F8FF; --surface: #FFFFFF; --surface-2: #F2F8FF;
+  --ink: #1A1F3B; --muted: #56627A; --hairline: #D3E1F2;
+  --accent: #2563EB; --accent-mark: #3B82F6; --accent-press: #1D4ED8; --accent-soft: #E3EDFF;
+  --neg: #C01D38; --neg-mark: #F4455E; --neg-soft: #FFE3E7;
+  --pos: #157A3F; --pos-mark: #22A55B; --pos-soft: #DCF5E6;
+  --violet: #7C5CFF; --lavender: #C7B8FF;
+  --warn: #A8470F; --warn-ink: #8A4B0F; --warn-soft: #FFF1E0;
+  --sel: #C7DBFF;
+  --font: "Geologica", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --shadow: 0 6px 20px rgba(59,130,246,.10), 0 1px 3px rgba(26,31,59,.06);
+  --shadow-lg: 0 16px 40px rgba(59,130,246,.16), 0 2px 6px rgba(26,31,59,.08);
+  --arrive: cubic-bezier(.16,1,.3,1);
+}
+* { box-sizing: border-box; }
+html {
+  -webkit-text-size-adjust: 100%; background: var(--page); color: var(--ink);
+  font-family: var(--font); font-size: 16px; line-height: 1.55; font-weight: 350;
+  -webkit-font-smoothing: antialiased; caret-color: var(--accent);
+  scrollbar-width: thin; scrollbar-color: var(--hairline) transparent;
+}
+body { margin: 0; background: var(--page); font-variant-numeric: tabular-nums; }
+::selection { background: var(--sel); color: var(--ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+a { color: var(--accent); text-underline-offset: 3px; }
+.num { font-variant-numeric: tabular-nums lining-nums; }
+.mono { font-family: var(--mono); font-weight: 400; }
+.neg, .neg a.v { color: var(--neg); }
+.pos, .pos a.v { color: var(--pos); }
+
+main { max-width: 820px; margin: 0 auto; padding: 32px 20px 64px; }
+.memo { background: var(--surface); border-radius: 16px; box-shadow: var(--shadow); }
+
+/* header: the decision first */
+.memo-head { padding: 32px 28px 8px; }
+h1 { font-size: 34px; line-height: 1.08; font-weight: 400; letter-spacing: -.025em;
+  margin: 0 0 12px; max-width: 24ch; text-wrap: balance; }
+.ctx { margin: 0; color: var(--muted); font-size: 15px; max-width: 65ch; }
+.decision-box { margin-top: 20px; background: var(--accent-soft); border-radius: 10px;
+  padding: 16px; font-size: 15.5px; line-height: 1.5; max-width: 72ch; }
+.decision-box b { font-weight: 600; color: var(--accent-press); }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 20px; margin-top: 16px; font-size: 13px;
+  line-height: 1.4; color: var(--muted); }
+.meta .num, .meta .mono { color: var(--ink); }
+.memo-body { padding: 4px 28px 28px; }
+
+/* claim-type filter: hidden without JS */
+.type-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 16px 0 8px; }
+.type-filter[hidden] { display: none; }
+.filter-l { font-size: 13px; color: var(--muted); margin-right: 4px; }
+.chip { font: inherit; font-size: 13px; font-weight: 500; line-height: 1.3; min-height: 32px;
+  padding: 5px 12px; border-radius: 999px; border: 1.5px solid var(--hairline);
+  background: var(--surface); color: var(--muted); cursor: pointer;
+  transition: background-color .15s ease-out, color .15s ease-out; }
+.chip:hover { background: var(--accent-soft); color: var(--ink); }
+.chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+body[data-filter] main [data-types] { opacity: .32; transition: opacity .2s ease-out; }
+body[data-filter] main [data-types].hl { opacity: 1; }
+
+/* text */
+h2 { font-size: 21px; line-height: 1.3; font-weight: 500; letter-spacing: -.015em;
+  margin: 36px 0 12px; }
+h3 { font-size: 17px; line-height: 1.3; font-weight: 500; margin: 24px 0 8px; }
+p, ul, ol { margin: 0 0 12px; max-width: 72ch; }
+ul, ol { padding-left: 20px; }
+li { margin: 4px 0; }
+strong { font-weight: 600; }
+blockquote { margin: 0 0 12px; padding: 0; color: var(--muted); font-size: 14px; max-width: 72ch; }
+blockquote p { margin: 0; }
+code, pre { font-family: var(--mono); font-size: 13px; }
+pre { overflow-x: auto; padding: 12px; background: var(--surface-2); border-radius: 10px; }
+
+/* citations */
+.cites { display: inline; }
+a.cite { font-family: var(--mono); font-size: 12px; line-height: 1.5; font-weight: 400;
+  color: var(--muted); background: var(--surface-2); border: 1px solid transparent;
+  border-radius: 6px; padding: 0 6px; text-decoration: none; white-space: nowrap; cursor: pointer;
+  transition: color .15s ease-out, background-color .15s ease-out; }
+a.cite:hover { color: var(--accent-press); background: var(--accent-soft); }
+a.cite.as { background: none; border: 1px dashed var(--hairline); }
+a.cite .tag { font-family: var(--font); font-size: 12px; font-weight: 500; margin-left: 4px;
+  color: var(--warn-ink); }
+a.cite.t-conclusion .tag { color: var(--accent-press); }
+#claims a.cite .tag, .memo a.cite .tag { padding: 0; background: none; border-radius: 0; }
+
+/* key figures: rows, not cards */
+.blk { margin: 12px 0 24px; padding: 0; }
+.blk figcaption { font-size: 14px; line-height: 1.4; color: var(--muted); margin: 0 0 12px; }
+.blk-unit { color: var(--muted); }
+.figs { border-top: 1px solid var(--hairline); display: grid; grid-template-columns: minmax(132px, fit-content(45%)) minmax(0, 1fr); column-gap: 24px; }
+.fig { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; column-gap: 24px;
+  padding: 12px 0; border-bottom: 1px solid var(--hairline); align-items: baseline; }
+.fig-v { font-size: 36px; line-height: 1.1; font-weight: 300; letter-spacing: -.03em; white-space: nowrap; }
+.fig-v .u { font-size: inherit; }
+.fig-v.long { font-size: 22px; line-height: 1.25; letter-spacing: -.01em; white-space: normal; text-wrap: balance; }
+.fig-t { font-size: 15px; line-height: 1.5; }
+.fig-n { display: block; color: var(--muted); font-size: 13px; line-height: 1.4; margin-top: 2px; }
+a.v { color: inherit; text-decoration: none; }
+a.v:hover { text-decoration: underline; text-decoration-color: var(--hairline); }
+
+/* bars, funnel, slope: HTML rows */
+.blk-rows { display: grid; gap: 12px; }
+.blk-row { display: grid; grid-template-columns: 160px minmax(0, 1fr) 84px; gap: 12px;
+  align-items: center; font-size: 14px; line-height: 1.3; }
+.blk-l { overflow-wrap: anywhere; }
+.blk-track { display: block; height: 20px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+.blk-bar { display: block; height: 100%; border-radius: 4px; transform-origin: left;
+  animation: grow .9s var(--arrive); }
+.blk-bar.violet { background: var(--violet); }
+.blk-bar.lavender { background: var(--lavender); }
+.blk-bar.plain { background: color-mix(in srgb, var(--muted) 45%, transparent); }
+.blk-bar.mark { background: var(--accent-mark); }
+.blk-v { text-align: right; font-weight: 500; white-space: nowrap; }
+.blk-v .u { font-weight: 400; color: var(--muted); }
+.blk-funnel .blk-track { height: 24px; border-radius: 6px; }
+.blk-slope .blk-row { grid-template-columns: 160px minmax(0, 1fr); align-items: start; }
+.blk-pair { display: grid; grid-template-columns: 56px minmax(0, 1fr) 84px; gap: 12px; align-items: center; }
+.blk-pair + .blk-pair { margin-top: 4px; }
+.blk-slope .blk-row > .blk-pair { grid-column: 2; }
+.blk-slope .blk-row > .blk-l { grid-row: span 2; padding-top: 2px; }
+.blk-c { color: var(--muted); font-size: 13px; }
+@keyframes grow { from { transform: scaleX(.02); } }
+
+/* line: marks in SVG, values and labels in HTML */
+.blk-plotwrap { position: relative; }
+.blk-tick { position: absolute; left: 0; transform: translateY(-50%); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.blk-plot { display: block; width: 100%; height: auto; overflow: visible; }
+.blk-plot .grid { stroke: var(--hairline); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.blk-plot .trace { fill: none; stroke: var(--muted); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.blk-plot .seg { fill: none; stroke: var(--accent-mark); stroke-width: 3; vector-effect: non-scaling-stroke; }
+.blk-plot .pt { fill: var(--surface); stroke: var(--muted); stroke-width: 2; }
+.blk-plot .pt.f { fill: var(--accent-mark); stroke: var(--accent-mark); }
+.blk-points { list-style: none; margin: 8px 0 0; padding: 0; display: grid; text-align: center; max-width: none; }
+.blk-pt { display: flex; flex-direction: column; margin: 0; min-width: 0; }
+.blk-pt .blk-v { text-align: center; font-size: 14px; font-weight: 500; }
+.blk-pt .blk-l { font-size: 12px; color: var(--muted); }
+.blk-pt.focal .blk-v:not(.neg):not(.pos) { color: var(--accent); }
+
+/* tables: decision table and table blocks */
+.table-wrap { overflow-x: auto; margin: 0 0 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.45; }
+th, td { text-align: left; vertical-align: top; padding: 9px 8px; border-bottom: 1px solid var(--hairline); }
+th { font-size: 13px; font-weight: 500; color: var(--muted); }
+td.chosen, th.chosen, tr.focal td { background: var(--accent-soft); }
+td.chosen:first-child, tr.focal td:first-child { font-weight: 500; }
+.chosen-mark { font-size: 12px; font-weight: 600; color: var(--accent-press); white-space: nowrap; margin-left: 4px; }
+
+/* accepted risks */
+.risks { display: grid; gap: 8px; margin: 0 0 12px; }
+.risk { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 10px;
+  background: var(--surface-2); font-size: 15px; line-height: 1.5; }
+.risk-ids { display: flex; flex-direction: column; gap: 4px; flex: none; }
+.risk-id { font-family: var(--mono); font-size: 12px; line-height: 1.5; color: var(--warn);
+  border: 1px solid currentColor; border-radius: 6px; padding: 0 6px; margin-top: 2px; }
+.risk-t { min-width: 0; }
+
+/* the claim list: the no-JS fallback for the popover, kept quiet */
+#claims { margin-top: 48px; padding: 0 8px; color: var(--ink); }
+#claims h2 { font-size: 17px; margin: 0 0 8px; }
+.claims-note { color: var(--muted); font-size: 13px; line-height: 1.4; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; padding: 0; list-style: none; }
+.tag { font-size: 12px; font-weight: 500; border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.tag.t-fact, .t-fact > header .tag { background: var(--pos-soft); color: var(--pos); }
+.tag.t-conclusion, .t-conclusion > header .tag { background: var(--accent-soft); color: var(--accent-press); }
+.tag.t-assumption, .tag.t-gap, .tag.t-hypothesis, .tag.t-forecast, .tag.t-synthetic,
+.t-assumption > header .tag, .t-gap > header .tag, .t-hypothesis > header .tag,
+.t-forecast > header .tag, .t-synthetic > header .tag { background: var(--warn-soft); color: var(--warn-ink); }
+.claim { padding: 12px 0; border-top: 1px solid var(--hairline); font-size: 14px; line-height: 1.5;
+  scroll-margin-top: 16px; }
+.claim:target { background: var(--accent-soft); border-radius: 10px; padding: 12px; }
+.claim header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.cid { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.status { color: var(--muted); font-size: 12px; }
+.status.bad { color: var(--warn); }
+.ctext { margin: 0 0 4px; }
+.note { color: var(--muted); font-size: 13px; margin: 0 0 6px; }
+.claim dl { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 12px; font-size: 13px; }
+.claim dt { color: var(--muted); }
+.claim dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.claim dd blockquote { font-family: var(--mono); font-size: 12px; color: var(--ink); margin: 0; }
+footer { margin-top: 32px; padding: 0 8px; color: var(--muted); font-size: 13px; line-height: 1.4; }
+footer code { font-size: 12px; }
+
+/* claim card popover */
+.ccard { position: fixed; z-index: 60; max-width: 380px; max-height: calc(100vh - 24px); overflow: auto;
+  background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-lg); padding: 14px 16px 16px;
+  opacity: 0; transform: translateY(6px);
+  transition: opacity .18s ease-out, transform .22s var(--arrive); }
+.ccard.on { opacity: 1; transform: none; }
+.ccard[hidden] { display: none; }
+.cc-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.cc-id { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.cc-status { font-size: 12px; color: var(--warn); }
+.cc-x { margin-left: auto; width: 32px; height: 32px; flex: none; display: grid; place-items: center;
+  border-radius: 999px; border: 1.5px solid var(--hairline); background: var(--surface);
+  color: var(--muted); cursor: pointer; padding: 0; }
+.cc-x:hover { background: var(--accent-soft); color: var(--ink); }
+.cc-x svg { width: 14px; height: 14px; }
+.cc-text { margin: 0 0 10px; font-size: 15px; line-height: 1.5; }
+.cc-src { font-size: 13px; line-height: 1.5; color: var(--muted); }
+.cc-src a { color: var(--accent-press); }
+.cc-quote { margin: 10px 0 0; padding: 8px 12px; background: var(--surface-2); border-radius: 10px;
+  font-family: var(--mono); font-size: 12px; line-height: 1.5; white-space: pre-wrap; color: var(--ink); }
+.cc-sup { margin-top: 8px; font-size: 13px; color: var(--muted); }
+
+@media (max-width: 980px) { main { max-width: 760px; } }
+@media (max-width: 560px) {
+  main { padding: 16px 12px 48px; }
+  .memo-head { padding: 24px 16px 4px; }
+  .memo-body { padding: 4px 16px 20px; }
+  h1 { font-size: 28px; }
+  .fig { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .blk-row { grid-template-columns: minmax(0, 1fr) 84px; gap: 4px 12px; }
+  .blk-row > .blk-l { grid-column: 1 / -1; }
+  .blk-slope .blk-row { grid-template-columns: minmax(0, 1fr); }
+  .blk-slope .blk-row > .blk-pair { grid-column: 1; }
+  .blk-slope .blk-row > .blk-l { grid-row: auto; }
+  .chip { min-height: 44px; }
+  .claim dl { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+@media print {
+  .ccard, .type-filter, .legend { display: none !important; }
+  html, body { background: #fff; }
+  .memo { box-shadow: none; }
+}
+</style>
+</head>
+<body>
+<main>
+<article class="memo">
+<header class="memo-head">
+<h1>Падение удержания «Семейного компаса» — вариант 6, гибрид</h1>
+<p class="ctx">Семейный компас: падение удержания после нового онбординга</p>
+<div class="decision-box" data-types="assumption conclusion forecast gap"><b>Решение.</b> Утвердить гибрид: переписать рекламу performance_ads под реальные возможности продукта и добавить понятный экран после оплаты; онбординг v2 не откатывать, канал не закрывать до результатов пилота <span class="cites"><a class="cite t-assumption as" href="#C004" data-c="C004">C004<span class="tag">допущение</span></a> <a class="cite t-conclusion" href="#C088" data-c="C088">C088<span class="tag">вывод</span></a> <a class="cite t-gap as" href="#C091" data-c="C091">C091<span class="tag">пробел</span></a> <a class="cite t-forecast as" href="#C094" data-c="C094">C094<span class="tag">прогноз</span></a></span>. Владелец: руководитель продукта; решение к 10 декабря 2026 <span class="cites"><a class="cite t-assumption as" href="#C004" data-c="C004">C004<span class="tag">допущение</span></a></span>.</div>
+<div class="meta"><span>Проверка: <span class="mono">2027-01-20</span></span><span>Факты: <span class="num">15</span></span><span>Допущения: <span class="num">2</span></span><span>Принятые риски: <span class="num">4</span></span></div>
+</header>
+<div class="memo-body">
+<nav class="type-filter" hidden aria-label="Подсветить утверждения по типу"><span class="filter-l">Показать опору:</span><button type="button" class="chip t-fact" data-type="fact" aria-pressed="false">факты</button><button type="button" class="chip t-forecast" data-type="forecast" aria-pressed="false">прогнозы</button><button type="button" class="chip t-assumption" data-type="assumption" aria-pressed="false">допущения</button><button type="button" class="chip t-gap" data-type="gap" aria-pressed="false">пробелы</button><button type="button" class="chip t-conclusion" data-type="conclusion" aria-pressed="false">выводы</button></nav>
+<blockquote><p>Одна страница для директора по продукту. Каждое утверждение цитирует [C...]; полные документы по ссылкам внизу.</p></blockquote>
+<h2>Ключевые цифры</h2>
+<figure class="blk blk-tiles"><figcaption><span class="blk-title">Почему действует сейчас</span></figcaption><div class="figs"><div class="fig focal" data-types="fact"><div class="fig-v num"><a class="v" href="#C071">52,08</a><span class="u">%</span></div><div class="fig-t"><span class="fig-l">M1 performance_ads</span><span class="cites"><a class="cite t-fact" href="#C071" data-c="C071">C071</a> <a class="cite t-fact" href="#C068" data-c="C068">C068</a> <a class="cite t-fact" href="#C070" data-c="C070">C070</a></span><small class="fig-n">при 88,88–94,38 % в остальных каналах</small></div></div><div class="fig" data-types="fact"><div class="fig-v num"><a class="v" href="#C072">52,09</a><span class="u">%</span></div><div class="fig-t"><span class="fig-l">Доля канала в новых</span><span class="cites"><a class="cite t-fact" href="#C072" data-c="C072">C072</a></span><small class="fig-n">половина притока семей</small></div></div><div class="fig" data-types="fact"><div class="fig-v num"><a class="v" href="#C076">82,35</a><span class="u">%</span></div><div class="fig-t"><span class="fig-l">Тикеты о разрыве</span><span class="cites"><a class="cite t-fact" href="#C076" data-c="C076">C076</a></span><small class="fig-n">обращений канала про несоответствие рекламы</small></div></div><div class="fig" data-types="assumption fact"><div class="fig-v num"><a class="v" href="#C049">7,6</a><span class="u">%</span></div><div class="fig-t"><span class="fig-l">Отток базы</span><span class="cites"><a class="cite t-fact" href="#C049" data-c="C049">C049</a> <a class="cite t-assumption as" href="#C003" data-c="C003">C003<span class="tag">допущение</span></a></span><small class="fig-n">против цели ~4 %</small></div></div></div></figure>
+<figure class="blk blk-bars"><figcaption><span class="blk-title">Удержание M1 по каналам, сентябрь 2026</span><span class="blk-unit">, %</span><span class="cites"><a class="cite t-fact" href="#C068" data-c="C068">C068</a> <a class="cite t-fact" href="#C069" data-c="C069">C069</a> <a class="cite t-fact" href="#C070" data-c="C070">C070</a> <a class="cite t-fact" href="#C071" data-c="C071">C071</a></span></figcaption><div class="blk-rows"><div class="blk-row" data-types="fact"><span class="blk-l">organic</span><span class="blk-track"><span class="blk-bar lavender" style="width:94.2%"></span></span><span class="blk-v num"><a class="v" href="#C068">88,88</a></span></div><div class="blk-row" data-types="fact"><span class="blk-l">referral</span><span class="blk-track"><span class="blk-bar lavender" style="width:97.4%"></span></span><span class="blk-v num"><a class="v" href="#C069">91,89</a></span></div><div class="blk-row" data-types="fact"><span class="blk-l">operator_bundle</span><span class="blk-track"><span class="blk-bar lavender" style="width:100%"></span></span><span class="blk-v num"><a class="v" href="#C070">94,38</a></span></div><div class="blk-row focal" data-types="fact"><span class="blk-l">performance_ads</span><span class="blk-track"><span class="blk-bar violet" style="width:54.8%"></span></span><span class="blk-v num"><a class="v" href="#C071">51,7</a></span></div></div></figure>
+<h2>Почему</h2>
+<ul><li data-types="conclusion fact">Отток вырос с 4% (апрель) до 7,6% (октябрь) при том, что онбординг v2 почти не изменил удержание нерекламных каналов (−0,32…−1,03 п.п.) — падение сосредоточено в performance_ads <span class="cites"><a class="cite t-fact" href="#C049" data-c="C049">C049</a> <a class="cite t-fact" href="#C079" data-c="C079">C079</a> <a class="cite t-fact" href="#C080" data-c="C080">C080</a> <a class="cite t-conclusion" href="#C087" data-c="C087">C087<span class="tag">вывод</span></a></span>.</li><li data-types="fact">Реклама обещает «ничего не нужно устанавливать», но без приложения-компаньона продукт даёт только грубую локацию по сети оператора-партнёра после SMS-согласия; 82,35% обращений канала — про этот разрыв <span class="cites"><a class="cite t-fact" href="#C059" data-c="C059">C059</a> <a class="cite t-fact" href="#C083" data-c="C083">C083</a> <a class="cite t-fact" href="#C076" data-c="C076">C076</a></span>.</li><li data-types="conclusion fact forecast">Канал при CAC ~650 ₽ едва окупается (LTV ~620–628 ₽), а его M1 ~52% хуже рыночной нормы (отток 15–40% на первом продлении) <span class="cites"><a class="cite t-fact" href="#C060" data-c="C060">C060</a> <a class="cite t-forecast as" href="#C032" data-c="C032">C032<span class="tag">прогноз</span></a> <a class="cite t-fact" href="#C086" data-c="C086">C086</a> <a class="cite t-conclusion" href="#C090" data-c="C090">C090<span class="tag">вывод</span></a></span>.</li></ul>
+<h2>Какие варианты рассматривали</h2>
+<ul><li data-types="conclusion fact">Откат v2 — отклонён: удержание других каналов после v2 не упало, причина не в онбординге <span class="cites"><a class="cite t-fact" href="#C079" data-c="C079">C079</a> <a class="cite t-fact" href="#C080" data-c="C080">C080</a> <a class="cite t-conclusion" href="#C087" data-c="C087">C087<span class="tag">вывод</span></a></span>.</li><li data-types="conclusion fact">Закрыть канал — запасной вариант: снимает источник плохого M1, но бьёт по половине притока новых семей <span class="cites"><a class="cite t-fact" href="#C072" data-c="C072">C072</a> <a class="cite t-conclusion" href="#C089" data-c="C089">C089<span class="tag">вывод</span></a></span>.</li><li data-types="conclusion gap">Только честная реклама или только экран — слабее гибрида, эффекты складываются <span class="cites"><a class="cite t-conclusion" href="#C088" data-c="C088">C088<span class="tag">вывод</span></a> <a class="cite t-gap as" href="#C091" data-c="C091">C091<span class="tag">пробел</span></a></span>.</li></ul>
+<h2>Продукт</h2>
+<ul><li data-types="fact forecast gap">Направление: честные креативы (установка компаньона, согласие ребёнка, точность по сети), понятный экран после оплаты, пилот с порогами <span class="cites"><a class="cite t-fact" href="#C059" data-c="C059">C059</a> <a class="cite t-fact" href="#C083" data-c="C083">C083</a> <a class="cite t-gap as" href="#C091" data-c="C091">C091<span class="tag">пробел</span></a> <a class="cite t-forecast as" href="#C094" data-c="C094">C094<span class="tag">прогноз</span></a></span>.</li><li data-types="fact">Отказы: не откатывать v2, не обещать «без установки», не закрывать канал до пилота <span class="cites"><a class="cite t-fact" href="#C079" data-c="C079">C079</a> <a class="cite t-fact" href="#C080" data-c="C080">C080</a> <a class="cite t-fact" href="#C059" data-c="C059">C059</a> <a class="cite t-fact" href="#C083" data-c="C083">C083</a> <a class="cite t-fact" href="#C072" data-c="C072">C072</a></span>.</li></ul>
+<h2>Коммуникация</h2>
+<ul><li data-types="fact">Ключевое сообщение: «Чтобы видеть ребёнка точно, на его телефон ставится приложение — он видит, что локация включена; без него — приблизительная локация по сети оператора-партнёра с согласием» <span class="cites"><a class="cite t-fact" href="#C084" data-c="C084">C084</a> <a class="cite t-fact" href="#C083" data-c="C083">C083</a></span>.</li><li data-types="fact">Доказательство: возможности продукта и честный экран вместо разрывного обещания <span class="cites"><a class="cite t-fact" href="#C084" data-c="C084">C084</a> <a class="cite t-fact" href="#C083" data-c="C083">C083</a> <a class="cite t-fact" href="#C076" data-c="C076">C076</a></span>.</li></ul>
+<h2>Как проверим</h2>
+<ul><li data-types="conclusion fact forecast">M1 performance_ads с базовых 52,08% к порогу 65–70% за 2 месяца пилота; при ниже 65% — переход к закрытию канала <span class="cites"><a class="cite t-fact" href="#C071" data-c="C071">C071</a> <a class="cite t-forecast as" href="#C094" data-c="C094">C094<span class="tag">прогноз</span></a> <a class="cite t-conclusion" href="#C089" data-c="C089">C089<span class="tag">вывод</span></a></span>.</li><li data-types="fact">Сравнение с тем же каналом до пилота и с нерекламными каналами как контролем <span class="cites"><a class="cite t-fact" href="#C071" data-c="C071">C071</a> <a class="cite t-fact" href="#C068" data-c="C068">C068</a> <a class="cite t-fact" href="#C069" data-c="C069">C069</a> <a class="cite t-fact" href="#C070" data-c="C070">C070</a></span>.</li><li data-types="forecast">Дата проверки: 2027-01-20 <span class="cites"><a class="cite t-forecast as" href="#C094" data-c="C094">C094<span class="tag">прогноз</span></a></span>.</li></ul>
+<h2>Риски и открытые вопросы</h2>
+<div class="risks"><div class="risk" data-types="gap"><span class="risk-ids"><span class="risk-id">O009</span></span><div class="risk-t">O009 — причинность разрыва на уровне семьи не доказана, есть корреляция тикетов и когорт <span class="cites"><a class="cite t-gap as" href="#C092" data-c="C092">C092<span class="tag">пробел</span></a></span>.</div></div><div class="risk" data-types="gap"><span class="risk-ids"><span class="risk-id">O010</span></span><div class="risk-t">O010 — независимый эффект экрана после оплаты не измерен <span class="cites"><a class="cite t-gap as" href="#C091" data-c="C091">C091<span class="tag">пробел</span></a></span>.</div></div><div class="risk" data-types="forecast"><span class="risk-ids"><span class="risk-id">O011</span></span><div class="risk-t">O011 — аддитивность мер гибрида не доказана <span class="cites"><a class="cite t-forecast as" href="#C093" data-c="C093">C093<span class="tag">прогноз</span></a></span>.</div></div></div>
+<section class="decision"><h2>Таблица решения</h2><div class="table-wrap"><table class="dt"><thead><tr><th>Критерий</th><th>В1. Наблюдение</th><th>В2. Откат v2</th><th>В3. Закрыть канал</th><th>В4. Реклама честная</th><th>В5. Экран после оплаты</th><th>В6. Гибрид 4+5</th></tr></thead><tbody><tr data-types="conclusion fact forecast gap"><td>Эффект на отток и M1</td><td data-types="conclusion fact">пассивное наблюдение не устраняет структурную причину <span class="cites"><a class="cite t-fact" href="#C071" data-c="C071">C071</a> <a class="cite t-fact" href="#C072" data-c="C072">C072</a> <a class="cite t-conclusion" href="#C087" data-c="C087">C087<span class="tag">вывод</span></a></span></td><td data-types="conclusion fact">не помогает, вина не в онбординге <span class="cites"><a class="cite t-fact" href="#C079" data-c="C079">C079</a> <a class="cite t-fact" href="#C080" data-c="C080">C080</a> <a class="cite t-conclusion" href="#C087" data-c="C087">C087<span class="tag">вывод</span></a></span></td><td data-types="conclusion fact">снимает основной источник плохого M1, но ценой канала <span class="cites"><a class="cite t-fact" href="#C071" data-c="C071">C071</a> <a class="cite t-conclusion" href="#C089" data-c="C089">C089<span class="tag">вывод</span></a></span></td><td data-types="conclusion forecast">гипотеза: устранение разрыва может поднять M1; эффект не измерен <span class="cites"><a class="cite t-conclusion" href="#C088" data-c="C088">C088<span class="tag">вывод</span></a> <a class="cite t-forecast as" href="#C093" data-c="C093">C093<span class="tag">прогноз</span></a></span></td><td data-types="gap">низкий, точечно; независимый эффект не измерен <span class="cites"><a class="cite t-gap as" href="#C091" data-c="C091">C091<span class="tag">пробел</span></a></span></td><td data-types="forecast gap">гипотеза сложения двух мер; аддитивность не доказана <span class="cites"><a class="cite t-gap as" href="#C091" data-c="C091">C091<span class="tag">пробел</span></a> <a class="cite t-forecast as" href="#C093" data-c="C093">C093<span class="tag">прогноз</span></a></span></td></tr><tr data-types="assumption"><td>Скорость и стоимость</td><td data-types="assumption">нулевая <span class="cites"><a class="cite t-assumption as" href="#C004" data-c="C004">C004<span class="tag">допущение</span></a></span></td><td data-types="assumption">средняя: переделка вёрстки <span class="cites"><a class="cite t-assumption as" href="#C004" data-c="C004">C004<span class="tag">допущение</span></a></span></td><td data-types="assumption">низкая: отключить закупку <span class="cites"><a class="cite t-assumption as" href="#C004" data-c="C004">C004<span class="tag">допущение</span></a></span></td><td data-types="assumption">низкая: правка креативов <span class="cites"><a class="cite t-assumption as" href="#C004" data-c="C004">C004<span class="tag">допущение</span></a></span></td><td data-types="assumption">низкая: одна правка <span class="cites"><a class="cite t-assumption as" href="#C004" data-c="C004">C004<span class="tag">допущение</span></a></span></td><td data-types="assumption">низкая–средняя, две меры в лимите 2–3 <span class="cites"><a class="cite t-assumption as" href="#C004" data-c="C004">C004<span class="tag">допущение</span></a></span></td></tr><tr data-types="conclusion fact forecast gap"><td>Рост базы и MRR</td><td data-types="fact">отток остаётся текущим <span class="cites"><a class="cite t-fact" href="#C049" data-c="C049">C049</a> <a class="cite t-fact" href="#C050" data-c="C050">C050</a></span></td><td data-types="conclusion">не помогает <span class="cites"><a class="cite t-conclusion" href="#C087" data-c="C087">C087<span class="tag">вывод</span></a></span></td><td data-types="conclusion fact">риск потери до 52,09% новых <span class="cites"><a class="cite t-fact" href="#C072" data-c="C072">C072</a> <a class="cite t-conclusion" href="#C089" data-c="C089">C089<span class="tag">вывод</span></a></span></td><td data-types="forecast">риск снижения конверсии <span class="cites"><a class="cite t-forecast as" href="#C093" data-c="C093">C093<span class="tag">прогноз</span></a></span></td><td data-types="gap">не меняет каналы <span class="cites"><a class="cite t-gap as" href="#C091" data-c="C091">C091<span class="tag">пробел</span></a></span></td><td data-types="forecast">баланс: не отключает канал, но конверсия может снизиться <span class="cites"><a class="cite t-forecast as" href="#C093" data-c="C093">C093<span class="tag">прогноз</span></a></span></td></tr><tr data-types="conclusion fact gap"><td>Соответствие рекламы продукту</td><td data-types="conclusion">нет, разрыв сохраняется <span class="cites"><a class="cite t-conclusion" href="#C088" data-c="C088">C088<span class="tag">вывод</span></a></span></td><td data-types="conclusion">не решает, реклама не тронута <span class="cites"><a class="cite t-conclusion" href="#C087" data-c="C087">C087<span class="tag">вывод</span></a></span></td><td data-types="conclusion">устраняет, но ценой канала <span class="cites"><a class="cite t-conclusion" href="#C088" data-c="C088">C088<span class="tag">вывод</span></a></span></td><td data-types="fact">да, прямо устраняет разрыв <span class="cites"><a class="cite t-fact" href="#C059" data-c="C059">C059</a> <a class="cite t-fact" href="#C083" data-c="C083">C083</a></span></td><td data-types="gap">снимает часть путаницы после оплаты <span class="cites"><a class="cite t-gap as" href="#C091" data-c="C091">C091<span class="tag">пробел</span></a></span></td><td data-types="fact gap">да, если обе правки работают <span class="cites"><a class="cite t-fact" href="#C059" data-c="C059">C059</a> <a class="cite t-gap as" href="#C091" data-c="C091">C091<span class="tag">пробел</span></a></span></td></tr><tr data-types="assumption"><td>Обратимость</td><td>—</td><td data-types="assumption">легко откатить обратно <span class="cites"><a class="cite t-assumption as" href="#C004" data-c="C004">C004<span class="tag">допущение</span></a></span></td><td data-types="assumption">легко: вернуть канал <span class="cites"><a class="cite t-assumption as" href="#C004" data-c="C004">C004<span class="tag">допущение</span></a></span></td><td data-types="assumption">легко: вернуть текст <span class="cites"><a class="cite t-assumption as" href="#C004" data-c="C004">C004<span class="tag">допущение</span></a></span></td><td data-types="assumption">легко <span class="cites"><a class="cite t-assumption as" href="#C004" data-c="C004">C004<span class="tag">допущение</span></a></span></td><td data-types="assumption">у мер разная обратимость <span class="cites"><a class="cite t-assumption as" href="#C004" data-c="C004">C004<span class="tag">допущение</span></a></span></td></tr></tbody></table></div></section>
+<h2>Материалы</h2>
+<blockquote><p>Полные документы: brief.md, options.md, table.md, product.md, comms.md, verification.md, decisions.md, claims.md (все утверждения с цитатами и источниками), sources/ (снимки источников).</p></blockquote>
+</div>
+</article>
+<section id="claims" aria-labelledby="claims-h">
+<h2 id="claims-h">Утверждения, на которые ссылается записка</h2>
+<p class="claims-note">Утверждений в записке и её опорах: 26 (факт — 15, прогноз — 3, допущение — 2, пробел — 2, вывод — 4). Номер утверждения в тексте открывает его карточку: тип, источник, место в источнике и цитату.</p>
+<ul class="legend"><li><span class="tag t-fact">факт</span></li><li><span class="tag t-forecast">прогноз</span></li><li><span class="tag t-assumption">допущение</span></li><li><span class="tag t-gap">пробел</span></li><li><span class="tag t-conclusion">вывод</span></li></ul>
+<article class="claim t-assumption" id="C004"><header><span class="cid">C004</span><span class="tag">допущение</span><span class="status">действует</span></header><p class="ctext">По умолчанию пользователя: жёсткие ограничения — не обещать в рекламе то, чего продукт не может сделать без установки приложения и согласия ребёнка; не ухудшать удержание текущих платящих семей; до 10 декабря ресурсы только на 2–3 быстрые меры.</p><p class="note">Допущение: принято без проверки по источнику; если оно неверно, вывод может измениться.</p><dl><dt>На дату</dt><dd>2026-11</dd></dl></article>
+<article class="claim t-conclusion" id="C088"><header><span class="cid">C088</span><span class="tag">вывод</span><span class="status">действует</span></header><p class="ctext">Вывод: рекламное обещание performance_ads (« ohne установки на телефон ребёнка») противоречит описанию продукта: без компаньона доступна только грубая локация по номеру оператора-партнёра после SMS-согласия, при этом 82,35% обращений канала relate to этому разрыву.</p><p class="note">Вывод: сделан из утверждений, на которые он опирается (см. ниже).</p><dl><dt>Опирается на</dt><dd><span class="cites"><a class="cite t-fact" href="#C059" data-c="C059">C059</a> <a class="cite t-fact" href="#C083" data-c="C083">C083</a> <a class="cite t-fact" href="#C084" data-c="C084">C084</a> <a class="cite t-fact" href="#C076" data-c="C076">C076</a></span></dd></dl></article>
+<article class="claim t-fact" id="C059"><header><span class="cid">C059</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В описании performance_ads указан рекламный текст: «Узнайте, где ваш ребёнок, просто по номеру телефона. Ничего не нужно устанавливать на его телефон».</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S002 · product.docx<br>файл: <a href="materials/product.docx">materials/product.docx</a>; снимок <a href="sources/S002.md">sources/S002.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>Реклама в канале performance_ads</dd><dt>Цитата</dt><dd><blockquote>«Узнайте, где ваш ребёнок, просто по номеру телефона. Ничего не нужно устанавливать на его телефон»</blockquote></dd><dt>На дату</dt><dd>2026-10</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: jev)</dd></dl></article>
+<article class="claim t-fact" id="C083"><header><span class="cid">C083</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В описании продукта указано: без приложения-компаньона местоположение можно получить только для номеров оператора-партнёра, по сигналу сети, с точностью до нескольких сотен метров и после SMS-согласия владельца номера.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S002 · product.docx<br>файл: <a href="materials/product.docx">materials/product.docx</a>; снимок <a href="sources/S002.md">sources/S002.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>Что делает продукт</dd><dt>Цитата</dt><dd><blockquote>«Без приложения-компаньона местоположение можно получить только для номеров оператора-партнёра: по сигналу сети, с точностью до нескольких сотен метров и после SMS-согласия владельца номера.»</blockquote></dd><dt>На дату</dt><dd>2026-10</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: jev)</dd></dl></article>
+<article class="claim t-fact" id="C084"><header><span class="cid">C084</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В описании продукта указано: на телефон ребёнка ставится приложение-компаньон, ребёнок видит, что геолокация включена, и может проверить это в любой момент.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S002 · product.docx<br>файл: <a href="materials/product.docx">materials/product.docx</a>; снимок <a href="sources/S002.md">sources/S002.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>Что делает продукт</dd><dt>Цитата</dt><dd><blockquote>«Для работы на телефон ребёнка ставится приложение-компаньон, ребёнок видит, что геолокация включена, и может это проверить в любой момент.»</blockquote></dd><dt>На дату</dt><dd>2026-10</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: jev)</dd></dl></article>
+<article class="claim t-fact" id="C076"><header><span class="cid">C076</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В отчёте q1_ticket_mix 14 из 17 обращений канала performance_ads (82.35%) за февраль–октябрь 2026 relate to разрыву между рекламой и продуктом.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S006 · q1_ticket_mix.txt<br>файл: <a href="analysis/q1_ticket_mix.txt">analysis/q1_ticket_mix.txt</a>; снимок <a href="sources/S006.md">sources/S006.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>ads_gap_share_of_ads</dd><dt>Цитата</dt><dd><blockquote>«ads_gap_share_of_ads = 82.35 % | period 2026-02..2026-10»</blockquote></dd><dt>На дату</dt><dd>2026-10 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-gap" id="C091"><header><span class="cid">C091</span><span class="tag">пробел</span><span class="status">действует</span></header><p class="ctext">Не измерен независимый эффект экрана после оплаты про приложение-компаньон: в тикетах 2 обращения organic, данных о доле доходящих до установки нет.</p><p class="note">Данных нет: это известное неизвестное, а не факт.</p><dl></dl></article>
+<article class="claim t-forecast" id="C094"><header><span class="cid">C094</span><span class="tag">прогноз</span><span class="status">действует</span></header><p class="ctext">Прогноз (наш): при честной рекламе M1 в performance_ads вырастет с ~52% к порогу 65–70% за 2 месяца пилота; если не вырастет — переходим к закрытию канала.</p><p class="note">Прогноз: оценка будущего, а не наблюдение.</p><dl></dl></article>
+<article class="claim t-fact" id="C071"><header><span class="cid">C071</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В отчёте q1_channel_decomposition удержание M1 performance_ads в мае 2026 — 52.08%, в сентябре 2026 — 51.7%.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S004 · q1_channel_decomposition.txt<br>файл: <a href="analysis/q1_channel_decomposition.txt">analysis/q1_channel_decomposition.txt</a>; снимок <a href="sources/S004.md">sources/S004.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>m1_2026-05_performance_ads</dd><dt>Цитата</dt><dd><blockquote>«m1_2026-05_performance_ads = 52.08 % | period 2026-05 ... m1_2026-09_performance_ads = 51.7 % | period 2026-09»</blockquote></dd><dt>На дату</dt><dd>2026-09 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: jev)</dd></dl></article>
+<article class="claim t-fact" id="C068"><header><span class="cid">C068</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В отчёте q1_channel_decomposition удержание M1 organic в апреле 2026 — 90%, в сентябре 2026 — 88.88%.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S004 · q1_channel_decomposition.txt<br>файл: <a href="analysis/q1_channel_decomposition.txt">analysis/q1_channel_decomposition.txt</a>; снимок <a href="sources/S004.md">sources/S004.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>m1_2026-04_organic</dd><dt>Цитата</dt><dd><blockquote>«m1_2026-04_organic = 90 % | period 2026-04 ... m1_2026-09_organic = 88.88 % | period 2026-09»</blockquote></dd><dt>На дату</dt><dd>2026-09 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: jev)</dd></dl></article>
+<article class="claim t-fact" id="C070"><header><span class="cid">C070</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В отчёте q1_channel_decomposition удержание M1 operator_bundle в апреле 2026 — 94.38%, в сентябре 2026 — 94.38% (за июнь 2026 данных нет).</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S004 · q1_channel_decomposition.txt<br>файл: <a href="analysis/q1_channel_decomposition.txt">analysis/q1_channel_decomposition.txt</a>; снимок <a href="sources/S004.md">sources/S004.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>m1_2026-04_operator_bundle</dd><dt>Цитата</dt><dd><blockquote>«m1_2026-04_operator_bundle = 94.38 % | period 2026-04 ... m1_2026-09_operator_bundle = 94.38 % | period 2026-09»</blockquote></dd><dt>На дату</dt><dd>2026-09 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-fact" id="C072"><header><span class="cid">C072</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В отчёте q1_channel_decomposition доля performance_ads среди новых платящих в мае 2026 — 44.82%, в октябре 2026 — 52.09%.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S004 · q1_channel_decomposition.txt<br>файл: <a href="analysis/q1_channel_decomposition.txt">analysis/q1_channel_decomposition.txt</a>; снимок <a href="sources/S004.md">sources/S004.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>ads_share_2026-10</dd><dt>Цитата</dt><dd><blockquote>«ads_share_2026-05 = 44.82 % | period 2026-05 ... ads_share_2026-10 = 52.09 % | period 2026-10»</blockquote></dd><dt>На дату</dt><dd>2026-10</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-fact" id="C049"><header><span class="cid">C049</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В таблице metrics.xlsx за октябрь 2026 указано 6335 новых платящих семей, 4089 оттоков и 56188 активных платящих на конец месяца.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S001 · metrics.xlsx<br>файл: <a href="materials/metrics.xlsx">materials/metrics.xlsx</a>; снимок <a href="sources/S001.md">sources/S001.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>monthly!A13:I13</dd><dt>Цитата</dt><dd><blockquote>«2026-10 53942 6335 4089 56188 7.6 16003812 v2»</blockquote></dd><dt>На дату</dt><dd>2026-10</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-assumption" id="C003"><header><span class="cid">C003</span><span class="tag">допущение</span><span class="status">действует</span></header><p class="ctext">По умолчанию пользователя: вернуть месячный отток к ~4% в течение 2–3 месяцев после внедрения, сохранив рост платящей базы/MRR; удержание M1 новых семей — на уровне v1 (~91%).</p><p class="note">Допущение: принято без проверки по источнику; если оно неверно, вывод может измениться.</p><dl><dt>На дату</dt><dd>2026-11</dd></dl></article>
+<article class="claim t-fact" id="C069"><header><span class="cid">C069</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В отчёте q1_channel_decomposition удержание M1 referral в апреле 2026 — 91.84%, в сентябре 2026 — 91.89%.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S004 · q1_channel_decomposition.txt<br>файл: <a href="analysis/q1_channel_decomposition.txt">analysis/q1_channel_decomposition.txt</a>; снимок <a href="sources/S004.md">sources/S004.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>m1_2026-04_referral</dd><dt>Цитата</dt><dd><blockquote>«m1_2026-04_referral = 91.84 % | period 2026-04 ... m1_2026-09_referral = 91.89 % | period 2026-09»</blockquote></dd><dt>На дату</dt><dd>2026-09 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: jev)</dd></dl></article>
+<article class="claim t-fact" id="C079"><header><span class="cid">C079</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В отчёте q2_onboarding_split изменение удержания M1 organic после v2 — −1.03 п.п. (2026-01..2026-09).</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S007 · q2_onboarding_split.txt<br>файл: <a href="analysis/q2_onboarding_split.txt">analysis/q2_onboarding_split.txt</a>; снимок <a href="sources/S007.md">sources/S007.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>m1_organic_change_pp</dd><dt>Цитата</dt><dd><blockquote>«m1_organic_change_pp = -1.03 p.p. | period 2026-01..2026-09»</blockquote></dd><dt>На дату</dt><dd>2026-09 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: jev)</dd></dl></article>
+<article class="claim t-fact" id="C080"><header><span class="cid">C080</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В отчёте q2_onboarding_split изменение удержания M1 referral после v2 — −0.32 п.п. (2026-01..2026-09).</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S007 · q2_onboarding_split.txt<br>файл: <a href="analysis/q2_onboarding_split.txt">analysis/q2_onboarding_split.txt</a>; снимок <a href="sources/S007.md">sources/S007.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>m1_referral_change_pp</dd><dt>Цитата</dt><dd><blockquote>«m1_referral_change_pp = -0.32 p.p. | period 2026-01..2026-09»</blockquote></dd><dt>На дату</dt><dd>2026-09 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: jev)</dd></dl></article>
+<article class="claim t-conclusion" id="C087"><header><span class="cid">C087</span><span class="tag">вывод</span><span class="status">действует</span></header><p class="ctext">Вывод: удержание M1 в нерекламных каналах в апреле–сентябре 2026 остаётся в пределах 88,61–94,38%, тогда как в performance_ads — 51,7–52,08% и канал даёт до 52,09% новых; падение общего удержания объясняется структурой привлечения, а не онбордингом v2.</p><p class="note">Вывод: сделан из утверждений, на которые он опирается (см. ниже).</p><dl><dt>Опирается на</dt><dd><span class="cites"><a class="cite t-fact" href="#C071" data-c="C071">C071</a> <a class="cite t-fact" href="#C068" data-c="C068">C068</a> <a class="cite t-fact" href="#C069" data-c="C069">C069</a> <a class="cite t-fact" href="#C070" data-c="C070">C070</a> <a class="cite t-fact" href="#C072" data-c="C072">C072</a></span></dd></dl></article>
+<article class="claim t-fact" id="C060"><header><span class="cid">C060</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В описании performance_ads стоимость привлечения платящей семьи в канале указана около 650 ₽, в остальных каналах — от 120 до 300 ₽.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S002 · product.docx<br>файл: <a href="materials/product.docx">materials/product.docx</a>; снимок <a href="sources/S002.md">sources/S002.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>Реклама в канале performance_ads</dd><dt>Цитата</dt><dd><blockquote>«Стоимость привлечения платящей семьи в канале - около 650 ₽, в остальных каналах - от 120 до 300 ₽.»</blockquote></dd><dt>На дату</dt><dd>2026-10</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-forecast" id="C032"><header><span class="cid">C032</span><span class="tag">прогноз</span><span class="status">действует</span></header><p class="ctext">Оценка на данных 2026 года: LTV семьи из performance_ads (~620–628 ₽ за 12 мес. при прогнозе удержания по уровню M1) почти не покрывает CAC ~650 ₽ — отношение LTV/CAC ~96%, канал едва окупается.</p><p class="note">Прогноз: оценка будущего, а не наблюдение.</p><dl><dt>Источник</dt><dd>S005 · q3_ads_ltv.txt<br>файл: <a href="analysis/q3_ads_ltv.txt">analysis/q3_ads_ltv.txt</a>; снимок <a href="sources/S005.md">sources/S005.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>ads_ltv_over_cac_2026-05</dd><dt>Цитата</dt><dd><blockquote>«ads_ltv_over_cac_2026-05 = 95.96 % | period 2026-05»</blockquote></dd><dt>На дату</dt><dd>2026-09 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата не подтверждает утверждение (оценка: jev)</dd></dl></article>
+<article class="claim t-fact" id="C086"><header><span class="cid">C086</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В отчёте RevenueCat State of Subscription Apps 2025 указано: при первом продлении отток составляет 30–50% у недельных и 15–40% у месячных подписок.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S008 · State of Subscription Apps 2025 – RevenueCat<br>страница: <a href="https://www.revenuecat.com/state-of-subscription-apps-2025">https://www.revenuecat.com/state-of-subscription-apps-2025</a>; получен 2026-11-16</dd><dt>Где</dt><dd>Retention &amp; Reactivation</dd><dt>Цитата</dt><dd><blockquote>«The first renewal has the biggest impact, with 30-50% churn on weekly plans and 15-40% on monthly.»</blockquote></dd><dt>На дату</dt><dd>2025 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-conclusion" id="C090"><header><span class="cid">C090</span><span class="tag">вывод</span><span class="status">действует</span></header><p class="ctext">Вывод: удержание M1 performance_ads около 52% хуже бенчмарка RevenueCat: при первом продлении месячной подписки типичный отток 15–40% (M1 60–85%), то есть канал аномален даже для холодного трафика.</p><p class="note">Вывод: сделан из утверждений, на которые он опирается (см. ниже).</p><dl><dt>Опирается на</dt><dd><span class="cites"><a class="cite t-fact" href="#C086" data-c="C086">C086</a> <a class="cite t-fact" href="#C071" data-c="C071">C071</a></span></dd></dl></article>
+<article class="claim t-conclusion" id="C089"><header><span class="cid">C089</span><span class="tag">вывод</span><span class="status">действует</span></header><p class="ctext">Вывод: performance_ads сохраняет удержание M1 около 52% и даёт до 52,09% новых, при CAC около 650 ₽ и LTV около 620–628 ₽ за 12 месяцев канал едва окупается; закрытие канала снимает структурную причину оттока, но бьёт по росту базы и MRR.</p><p class="note">Вывод: сделан из утверждений, на которые он опирается (см. ниже).</p><dl><dt>Опирается на</dt><dd><span class="cites"><a class="cite t-fact" href="#C071" data-c="C071">C071</a> <a class="cite t-fact" href="#C072" data-c="C072">C072</a> <a class="cite t-fact" href="#C060" data-c="C060">C060</a> <a class="cite t-fact" href="#C050" data-c="C050">C050</a> <a class="cite t-fact" href="#C049" data-c="C049">C049</a></span></dd></dl></article>
+<article class="claim t-fact" id="C050"><header><span class="cid">C050</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В таблице metrics.xlsx MRR за октябрь 2026 указан 16003812, за апрель 2026 — 11383123.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S001 · metrics.xlsx<br>файл: <a href="materials/metrics.xlsx">materials/metrics.xlsx</a>; снимок <a href="sources/S001.md">sources/S001.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>monthly!A7:I13</dd><dt>Цитата</dt><dd><blockquote>«2026-04 38843 2870 1536 40177 4 11383123 v1 91.7 ... 2026-10 53942 6335 4089 56188 7.6 16003812 v2»</blockquote></dd><dt>На дату</dt><dd>2026-10</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: jev)</dd></dl></article>
+<article class="claim t-gap" id="C092"><header><span class="cid">C092</span><span class="tag">пробел</span><span class="status">действует</span></header><p class="ctext">Причина оттока на уровне отдельной семьи из performance_ads не подтверждена интервью: есть только корреляция тикетов и когорт.</p><p class="note">Данных нет: это известное неизвестное, а не факт.</p><dl></dl></article>
+<article class="claim t-forecast" id="C093"><header><span class="cid">C093</span><span class="tag">прогноз</span><span class="status">действует</span></header><p class="ctext">Прогноз (наш): честная реклама поднимет M1 в performance_ads, но может снизить конверсию в оплату; эффект подлежит проверке пилотом.</p><p class="note">Прогноз: оценка будущего, а не наблюдение.</p><dl></dl></article>
+</section>
+<footer>Собрано командой <code>strat report</code> 2026-11-17 из memo.md, claims.jsonl и sources/index.jsonl. Работает без интернета: без сети текст показан системным шрифтом.</footer>
+</main>
+<div class="ccard" id="ccard" role="dialog" aria-modal="false" aria-labelledby="cc-id" tabindex="-1" hidden>
+<div class="cc-top"><span class="cc-id" id="cc-id"></span><span class="tag" id="cc-type"></span><span class="cc-status" id="cc-status"></span><button type="button" class="cc-x" id="cc-x" aria-label="Закрыть"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></div>
+<p class="cc-text" id="cc-text"></p>
+<div class="cc-src" id="cc-src"></div>
+<blockquote class="cc-quote" id="cc-quote" hidden></blockquote>
+<div class="cc-sup" id="cc-sup" hidden></div>
+</div>
+<script id="claims-data" type="application/json">{"claims": {"C004": {"id": "C004", "type": "assumption", "label": "допущение", "status": "", "text": "По умолчанию пользователя: жёсткие ограничения — не обещать в рекламе то, чего продукт не может сделать без установки приложения и согласия ребёнка; не ухудшать удержание текущих платящих семей; до 10 декабря ресурсы только на 2–3 быстрые меры.", "source": null, "where": null, "quote": null, "note": "Допущение: принято без проверки по источнику; если оно неверно, вывод может измениться.", "supports": []}, "C088": {"id": "C088", "type": "conclusion", "label": "вывод", "status": "", "text": "Вывод: рекламное обещание performance_ads (« ohne установки на телефон ребёнка») противоречит описанию продукта: без компаньона доступна только грубая локация по номеру оператора-партнёра после SMS-согласия, при этом 82,35% обращений канала relate to этому разрыву.", "source": null, "where": null, "quote": null, "note": "Вывод: сделан из утверждений, на которые он опирается (см. ниже).", "supports": ["C059", "C083", "C084", "C076"]}, "C059": {"id": "C059", "type": "fact", "label": "факт", "status": "", "text": "В описании performance_ads указан рекламный текст: «Узнайте, где ваш ребёнок, просто по номеру телефона. Ничего не нужно устанавливать на его телефон».", "source": "S002", "where": "Реклама в канале performance_ads", "quote": "Узнайте, где ваш ребёнок, просто по номеру телефона. Ничего не нужно устанавливать на его телефон", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C083": {"id": "C083", "type": "fact", "label": "факт", "status": "", "text": "В описании продукта указано: без приложения-компаньона местоположение можно получить только для номеров оператора-партнёра, по сигналу сети, с точностью до нескольких сотен метров и после SMS-согласия владельца номера.", "source": "S002", "where": "Что делает продукт", "quote": "Без приложения-компаньона местоположение можно получить только для номеров оператора-партнёра: по сигналу сети, с точностью до нескольких сотен метров и после SMS-согласия владельца номера.", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C084": {"id": "C084", "type": "fact", "label": "факт", "status": "", "text": "В описании продукта указано: на телефон ребёнка ставится приложение-компаньон, ребёнок видит, что геолокация включена, и может проверить это в любой момент.", "source": "S002", "where": "Что делает продукт", "quote": "Для работы на телефон ребёнка ставится приложение-компаньон, ребёнок видит, что геолокация включена, и может это проверить в любой момент.", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C076": {"id": "C076", "type": "fact", "label": "факт", "status": "", "text": "В отчёте q1_ticket_mix 14 из 17 обращений канала performance_ads (82.35%) за февраль–октябрь 2026 relate to разрыву между рекламой и продуктом.", "source": "S006", "where": "ads_gap_share_of_ads", "quote": "ads_gap_share_of_ads = 82.35 % | period 2026-02..2026-10", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C091": {"id": "C091", "type": "gap", "label": "пробел", "status": "", "text": "Не измерен независимый эффект экрана после оплаты про приложение-компаньон: в тикетах 2 обращения organic, данных о доле доходящих до установки нет.", "source": null, "where": null, "quote": null, "note": "Данных нет: это известное неизвестное, а не факт.", "supports": []}, "C094": {"id": "C094", "type": "forecast", "label": "прогноз", "status": "", "text": "Прогноз (наш): при честной рекламе M1 в performance_ads вырастет с ~52% к порогу 65–70% за 2 месяца пилота; если не вырастет — переходим к закрытию канала.", "source": null, "where": null, "quote": null, "note": "Прогноз: оценка будущего, а не наблюдение.", "supports": []}, "C071": {"id": "C071", "type": "fact", "label": "факт", "status": "", "text": "В отчёте q1_channel_decomposition удержание M1 performance_ads в мае 2026 — 52.08%, в сентябре 2026 — 51.7%.", "source": "S004", "where": "m1_2026-05_performance_ads", "quote": "m1_2026-05_performance_ads = 52.08 % | period 2026-05 ... m1_2026-09_performance_ads = 51.7 % | period 2026-09", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C068": {"id": "C068", "type": "fact", "label": "факт", "status": "", "text": "В отчёте q1_channel_decomposition удержание M1 organic в апреле 2026 — 90%, в сентябре 2026 — 88.88%.", "source": "S004", "where": "m1_2026-04_organic", "quote": "m1_2026-04_organic = 90 % | period 2026-04 ... m1_2026-09_organic = 88.88 % | period 2026-09", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C070": {"id": "C070", "type": "fact", "label": "факт", "status": "", "text": "В отчёте q1_channel_decomposition удержание M1 operator_bundle в апреле 2026 — 94.38%, в сентябре 2026 — 94.38% (за июнь 2026 данных нет).", "source": "S004", "where": "m1_2026-04_operator_bundle", "quote": "m1_2026-04_operator_bundle = 94.38 % | period 2026-04 ... m1_2026-09_operator_bundle = 94.38 % | period 2026-09", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C072": {"id": "C072", "type": "fact", "label": "факт", "status": "", "text": "В отчёте q1_channel_decomposition доля performance_ads среди новых платящих в мае 2026 — 44.82%, в октябре 2026 — 52.09%.", "source": "S004", "where": "ads_share_2026-10", "quote": "ads_share_2026-05 = 44.82 % | period 2026-05 ... ads_share_2026-10 = 52.09 % | period 2026-10", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C049": {"id": "C049", "type": "fact", "label": "факт", "status": "", "text": "В таблице metrics.xlsx за октябрь 2026 указано 6335 новых платящих семей, 4089 оттоков и 56188 активных платящих на конец месяца.", "source": "S001", "where": "monthly!A13:I13", "quote": "2026-10 53942 6335 4089 56188 7.6 16003812 v2", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C003": {"id": "C003", "type": "assumption", "label": "допущение", "status": "", "text": "По умолчанию пользователя: вернуть месячный отток к ~4% в течение 2–3 месяцев после внедрения, сохранив рост платящей базы/MRR; удержание M1 новых семей — на уровне v1 (~91%).", "source": null, "where": null, "quote": null, "note": "Допущение: принято без проверки по источнику; если оно неверно, вывод может измениться.", "supports": []}, "C069": {"id": "C069", "type": "fact", "label": "факт", "status": "", "text": "В отчёте q1_channel_decomposition удержание M1 referral в апреле 2026 — 91.84%, в сентябре 2026 — 91.89%.", "source": "S004", "where": "m1_2026-04_referral", "quote": "m1_2026-04_referral = 91.84 % | period 2026-04 ... m1_2026-09_referral = 91.89 % | period 2026-09", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C079": {"id": "C079", "type": "fact", "label": "факт", "status": "", "text": "В отчёте q2_onboarding_split изменение удержания M1 organic после v2 — −1.03 п.п. (2026-01..2026-09).", "source": "S007", "where": "m1_organic_change_pp", "quote": "m1_organic_change_pp = -1.03 p.p. | period 2026-01..2026-09", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C080": {"id": "C080", "type": "fact", "label": "факт", "status": "", "text": "В отчёте q2_onboarding_split изменение удержания M1 referral после v2 — −0.32 п.п. (2026-01..2026-09).", "source": "S007", "where": "m1_referral_change_pp", "quote": "m1_referral_change_pp = -0.32 p.p. | period 2026-01..2026-09", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C087": {"id": "C087", "type": "conclusion", "label": "вывод", "status": "", "text": "Вывод: удержание M1 в нерекламных каналах в апреле–сентябре 2026 остаётся в пределах 88,61–94,38%, тогда как в performance_ads — 51,7–52,08% и канал даёт до 52,09% новых; падение общего удержания объясняется структурой привлечения, а не онбордингом v2.", "source": null, "where": null, "quote": null, "note": "Вывод: сделан из утверждений, на которые он опирается (см. ниже).", "supports": ["C071", "C068", "C069", "C070", "C072"]}, "C060": {"id": "C060", "type": "fact", "label": "факт", "status": "", "text": "В описании performance_ads стоимость привлечения платящей семьи в канале указана около 650 ₽, в остальных каналах — от 120 до 300 ₽.", "source": "S002", "where": "Реклама в канале performance_ads", "quote": "Стоимость привлечения платящей семьи в канале - около 650 ₽, в остальных каналах - от 120 до 300 ₽.", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C032": {"id": "C032", "type": "forecast", "label": "прогноз", "status": "", "text": "Оценка на данных 2026 года: LTV семьи из performance_ads (~620–628 ₽ за 12 мес. при прогнозе удержания по уровню M1) почти не покрывает CAC ~650 ₽ — отношение LTV/CAC ~96%, канал едва окупается.", "source": "S005", "where": "ads_ltv_over_cac_2026-05", "quote": "ads_ltv_over_cac_2026-05 = 95.96 % | period 2026-05", "note": "Прогноз: оценка будущего, а не наблюдение.", "supports": []}, "C086": {"id": "C086", "type": "fact", "label": "факт", "status": "", "text": "В отчёте RevenueCat State of Subscription Apps 2025 указано: при первом продлении отток составляет 30–50% у недельных и 15–40% у месячных подписок.", "source": "S008", "where": "Retention \u0026 Reactivation", "quote": "The first renewal has the biggest impact, with 30-50% churn on weekly plans and 15-40% on monthly.", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C090": {"id": "C090", "type": "conclusion", "label": "вывод", "status": "", "text": "Вывод: удержание M1 performance_ads около 52% хуже бенчмарка RevenueCat: при первом продлении месячной подписки типичный отток 15–40% (M1 60–85%), то есть канал аномален даже для холодного трафика.", "source": null, "where": null, "quote": null, "note": "Вывод: сделан из утверждений, на которые он опирается (см. ниже).", "supports": ["C086", "C071"]}, "C089": {"id": "C089", "type": "conclusion", "label": "вывод", "status": "", "text": "Вывод: performance_ads сохраняет удержание M1 около 52% и даёт до 52,09% новых, при CAC около 650 ₽ и LTV около 620–628 ₽ за 12 месяцев канал едва окупается; закрытие канала снимает структурную причину оттока, но бьёт по росту базы и MRR.", "source": null, "where": null, "quote": null, "note": "Вывод: сделан из утверждений, на которые он опирается (см. ниже).", "supports": ["C071", "C072", "C060", "C050", "C049"]}, "C050": {"id": "C050", "type": "fact", "label": "факт", "status": "", "text": "В таблице metrics.xlsx MRR за октябрь 2026 указан 16003812, за апрель 2026 — 11383123.", "source": "S001", "where": "monthly!A7:I13", "quote": "2026-04 38843 2870 1536 40177 4 11383123 v1 91.7 ... 2026-10 53942 6335 4089 56188 7.6 16003812 v2", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C092": {"id": "C092", "type": "gap", "label": "пробел", "status": "", "text": "Причина оттока на уровне отдельной семьи из performance_ads не подтверждена интервью: есть только корреляция тикетов и когорт.", "source": null, "where": null, "quote": null, "note": "Данных нет: это известное неизвестное, а не факт.", "supports": []}, "C093": {"id": "C093", "type": "forecast", "label": "прогноз", "status": "", "text": "Прогноз (наш): честная реклама поднимет M1 в performance_ads, но может снизить конверсию в оплату; эффект подлежит проверке пилотом.", "source": null, "where": null, "quote": null, "note": "Прогноз: оценка будущего, а не наблюдение.", "supports": []}}, "sources": {"S002": {"title": "product.docx", "kind": "file", "href": "materials/product.docx", "download": true, "snap": "sources/S002.md"}, "S006": {"title": "q1_ticket_mix.txt", "kind": "analysis", "href": "analysis/q1_ticket_mix.txt", "download": true, "snap": "sources/S006.md"}, "S004": {"title": "q1_channel_decomposition.txt", "kind": "analysis", "href": "analysis/q1_channel_decomposition.txt", "download": true, "snap": "sources/S004.md"}, "S001": {"title": "metrics.xlsx", "kind": "file", "href": "materials/metrics.xlsx", "download": true, "snap": "sources/S001.md"}, "S007": {"title": "q2_onboarding_split.txt", "kind": "analysis", "href": "analysis/q2_onboarding_split.txt", "download": true, "snap": "sources/S007.md"}, "S005": {"title": "q3_ads_ltv.txt", "kind": "analysis", "href": "analysis/q3_ads_ltv.txt", "download": true, "snap": "sources/S005.md"}, "S008": {"title": "State of Subscription Apps 2025 – RevenueCat", "kind": "web", "href": "https://www.revenuecat.com/state-of-subscription-apps-2025", "download": false, "snap": "sources/S008.md"}}}</script>
+<script>
+(function () {
+  var nav = document.querySelector(".type-filter");
+  if (!nav) return;
+  nav.hidden = false;
+  nav.addEventListener("click", function (e) {
+    var chip = e.target.closest && e.target.closest(".chip");
+    if (!chip) return;
+    var type = chip.getAttribute("data-type");
+    var on = document.body.getAttribute("data-filter") !== type;
+    nav.querySelectorAll(".chip").forEach(function (c) {
+      c.setAttribute("aria-pressed", String(on && c === chip));
+    });
+    if (on) document.body.setAttribute("data-filter", type);
+    else document.body.removeAttribute("data-filter");
+    document.querySelectorAll("main [data-types]").forEach(function (el) {
+      el.classList.toggle("hl", on && el.getAttribute("data-types").split(" ").indexOf(type) >= 0);
+    });
+  });
+})();
+(function () {
+  var data;
+  try { data = JSON.parse(document.getElementById("claims-data").textContent); } catch (e) { return; }
+  var card = document.getElementById("ccard");
+  var $ = function (id) { return document.getElementById(id); };
+  var last = null, timer = null;
+  function chip(id) {
+    var c = data.claims[id], a = document.createElement("a");
+    a.className = "cite" + (c && ["gap", "assumption", "hypothesis", "forecast", "synthetic"].indexOf(c.type) >= 0 ? " as" : "");
+    a.href = "#" + id; a.setAttribute("data-c", id); a.textContent = id;
+    return a;
+  }
+  function open(a) {
+    var c = data.claims[a.getAttribute("data-c")];
+    if (!c) return false;
+    if (!card.contains(a)) last = a;
+    clearTimeout(timer);
+    $("cc-id").textContent = c.id;
+    var t = $("cc-type"); t.textContent = c.label; t.className = "tag t-" + c.type;
+    $("cc-status").textContent = c.status || "";
+    $("cc-text").textContent = c.text;
+    var src = $("cc-src"), q = $("cc-quote"), sup = $("cc-sup");
+    src.replaceChildren();
+    var S = c.source && data.sources[c.source];
+    if (S) {
+      var l = document.createElement(S.href ? "a" : "span");
+      if (S.href) { l.href = S.href; if (S.download) l.setAttribute("download", ""); }
+      l.textContent = S.title;
+      src.append("Источник: ", l, " (" + c.source + ")");
+      if (S.snap) {
+        var s = document.createElement("a"); s.href = S.snap; s.textContent = "текст";
+        src.append(", ", s);
+      }
+      if (c.where) {
+        var w = document.createElement("div"); w.textContent = "Место: " + c.where; src.append(w);
+      }
+      if (c.type !== "fact" && c.note) {
+        var n = document.createElement("div"); n.textContent = c.note; src.append(n);
+      }
+    } else {
+      src.textContent = c.source ? "Источник: " + c.source : (c.note || "Без источника.");
+    }
+    q.textContent = c.quote || ""; q.hidden = !c.quote;
+    sup.replaceChildren();
+    sup.hidden = !(c.supports && c.supports.length);
+    if (!sup.hidden) {
+      sup.append("Опирается на: ");
+      c.supports.forEach(function (id) { sup.append(chip(id), " "); });
+    }
+    var r = a.getBoundingClientRect(), W = Math.min(380, innerWidth - 24);
+    card.style.width = W + "px";
+    card.style.left = Math.max(12, Math.min(r.left, innerWidth - W - 12)) + "px";
+    card.hidden = false;
+    var h = card.offsetHeight;
+    card.style.top = (r.bottom + 8 + h > innerHeight ? Math.max(12, r.top - h - 8) : r.bottom + 8) + "px";
+    requestAnimationFrame(function () { card.classList.add("on"); });
+    $("cc-x").focus({ preventScroll: true });
+    return true;
+  }
+  function close() {
+    if (card.hidden) return;
+    card.classList.remove("on");
+    timer = setTimeout(function () { card.hidden = true; }, 180);
+    if (last) last.focus({ preventScroll: true });
+  }
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest("a.cite, a.v");
+    if (a) {
+      if (a.classList.contains("v")) {
+        var id = (a.getAttribute("href") || "").slice(1);
+        if (!data.claims[id]) return;
+        a.setAttribute("data-c", id);
+      }
+      if (open(a)) e.preventDefault();
+      return;
+    }
+    if (!card.hidden && !card.contains(e.target)) close();
+  });
+  $("cc-x").addEventListener("click", close);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
+  addEventListener("scroll", close, { passive: true });
+})();
+</script>
+</body>
+</html>

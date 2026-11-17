@@ -1,0 +1,11 @@
+INPUT materials/metrics.xlsx sha256=f3a7b58fcba8
+FIGURE ads_paid_months_per_family_2026-05_2026-09 = 1.94 months | period 2026-05..2026-09
+FIGURE ads_revenue_per_family_2026-05_2026-09 = 581 RUB | period 2026-05..2026-09
+FIGURE ads_cac_per_family = 650 RUB | period 2026-05..2026-09
+FIGURE ads_contribution_per_family_2026-05_2026-09 = -69 RUB | period 2026-05..2026-09
+FIGURE other_paid_months_per_family_2026-05_2026-09 = 3.32 months | period 2026-05..2026-09
+FIGURE other_revenue_per_family_2026-05_2026-09 = 992 RUB | period 2026-05..2026-09
+FIGURE other_cac_per_family = 200 RUB | period 2026-05..2026-09
+FIGURE other_contribution_per_family_2026-05_2026-09 = 792 RUB | period 2026-05..2026-09
+FIGURE ads_break_even_months = 2.2 months | period 2026-05..2026-09
+FIGURE other_break_even_months = 0.7 months | period 2026-05..2026-09

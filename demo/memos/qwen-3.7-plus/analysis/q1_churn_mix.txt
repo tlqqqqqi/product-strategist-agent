@@ -1,0 +1,8 @@
+INPUT materials/metrics.xlsx sha256=f3a7b58fcba8
+FIGURE churned_2026-04 = 1536 families | period 2026-04
+FIGURE churned_2026-08 = 3776 families | period 2026-08
+FIGURE churned_change_2026-04_to_2026-08 = 2240 families | period 2026-04..2026-08
+FIGURE ads_2026-08_lost_m1 = 1528 families | period 2026-08
+FIGURE ads_lost_share_of_churned_2026-08 = 40.5 % | period 2026-08
+FIGURE ads_2026-06_lost_m1 = 1337 families | period 2026-06
+FIGURE ads_lost_share_of_churned_2026-06 = 48.4 % | period 2026-06

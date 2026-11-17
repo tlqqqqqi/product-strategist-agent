@@ -268,6 +268,13 @@ def web_activity(cdir: Path) -> list[dict]:
     return out
 
 
+def link_memo(run: dict, target: Path) -> None:
+    """Link the run's memo when demo/memos/<run id>/memo.html sits next to the replay folder."""
+    rel = Path("..") / "memos" / run["id"] / "memo.html"
+    if (target.parent.parent / "memos" / run["id"] / "memo.html").is_file():
+        run["memo"] = rel.as_posix()
+
+
 def attach_web(run: dict, cdir: Path) -> None:
     """Count, per step group and per run, the searches made, the provider that answered, the
     results returned and the pages saved, as the case log recorded them. A row belongs to the
@@ -884,6 +891,7 @@ def export(case: str | None = None, transcripts: str | None = None, out: str | N
         attach_web(run, cdir)
     run["meta"].pop("start", None)  # no run date or length is published
     target = Path(out) if out else root() / "demo" / "replay" / "script.json"
+    link_memo(run, target)
     bundle = put_run(load_bundle(target), run)
     embedded = write_bundle(target, bundle)
     m = run["meta"]

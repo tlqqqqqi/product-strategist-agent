@@ -1,0 +1,24 @@
+INPUT materials/metrics.xlsx sha256=f3a7b58fcba8
+FIGURE 2025-11..2026-04_organic_m1_pct = 90 % | period 2025-11..2026-04
+FIGURE 2025-11..2026-04_referral_m1_pct = 91.9 % | period 2025-11..2026-04
+FIGURE 2025-11..2026-04_operator_bundle_m1_pct = 94 % | period 2025-11..2026-04
+GAP retained_m1 2026-10 organic
+FIGURE 2026-05..2026-09_organic_m1_pct = 89 % | period 2026-05..2026-09
+GAP retained_m1 2026-10 referral
+FIGURE 2026-05..2026-09_referral_m1_pct = 91.6 % | period 2026-05..2026-09
+GAP retained_m1 2026-06 operator_bundle
+GAP retained_m1 2026-10 operator_bundle
+FIGURE 2026-05..2026-09_operator_bundle_m1_pct = 94 % | period 2026-05..2026-09
+FIGURE ads_2026-05_m1_pct = 52.1 % | period 2026-05
+FIGURE ads_2026-05_new_paying = 2400 families | period 2026-05
+FIGURE ads_2026-06_m1_pct = 51.9 % | period 2026-06
+FIGURE ads_2026-06_new_paying = 2780 families | period 2026-06
+FIGURE ads_2026-07_m1_pct = 52.3 % | period 2026-07
+FIGURE ads_2026-07_new_paying = 3050 families | period 2026-07
+FIGURE ads_2026-08_m1_pct = 52.4 % | period 2026-08
+FIGURE ads_2026-08_new_paying = 3210 families | period 2026-08
+FIGURE ads_2026-09_m1_pct = 51.7 % | period 2026-09
+FIGURE ads_2026-09_new_paying = 3120 families | period 2026-09
+FIGURE ads_new_paying_2026-05_2026-09 = 17860 families | period 2026-05..2026-09
+FIGURE other_new_paying_2026-05_2026-09 = 17700 families | period 2026-05..2026-09
+FIGURE ads_share_new_2026-05_2026-09 = 50.2 % | period 2026-05..2026-09

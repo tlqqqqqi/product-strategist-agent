@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Исправить обещание рекламы performance_ads, а не откатывать онбординг</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geologica:wght@300..600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+/* Tokens from DESIGN.md, defined once. Light only: a dark theme is not designed. */
+:root {
+  --page: #F5F8FF; --surface: #FFFFFF; --surface-2: #F2F8FF;
+  --ink: #1A1F3B; --muted: #56627A; --hairline: #D3E1F2;
+  --accent: #2563EB; --accent-mark: #3B82F6; --accent-press: #1D4ED8; --accent-soft: #E3EDFF;
+  --neg: #C01D38; --neg-mark: #F4455E; --neg-soft: #FFE3E7;
+  --pos: #157A3F; --pos-mark: #22A55B; --pos-soft: #DCF5E6;
+  --violet: #7C5CFF; --lavender: #C7B8FF;
+  --warn: #A8470F; --warn-ink: #8A4B0F; --warn-soft: #FFF1E0;
+  --sel: #C7DBFF;
+  --font: "Geologica", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --shadow: 0 6px 20px rgba(59,130,246,.10), 0 1px 3px rgba(26,31,59,.06);
+  --shadow-lg: 0 16px 40px rgba(59,130,246,.16), 0 2px 6px rgba(26,31,59,.08);
+  --arrive: cubic-bezier(.16,1,.3,1);
+}
+* { box-sizing: border-box; }
+html {
+  -webkit-text-size-adjust: 100%; background: var(--page); color: var(--ink);
+  font-family: var(--font); font-size: 16px; line-height: 1.55; font-weight: 350;
+  -webkit-font-smoothing: antialiased; caret-color: var(--accent);
+  scrollbar-width: thin; scrollbar-color: var(--hairline) transparent;
+}
+body { margin: 0; background: var(--page); font-variant-numeric: tabular-nums; }
+::selection { background: var(--sel); color: var(--ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+a { color: var(--accent); text-underline-offset: 3px; }
+.num { font-variant-numeric: tabular-nums lining-nums; }
+.mono { font-family: var(--mono); font-weight: 400; }
+.neg, .neg a.v { color: var(--neg); }
+.pos, .pos a.v { color: var(--pos); }
+
+main { max-width: 820px; margin: 0 auto; padding: 32px 20px 64px; }
+.memo { background: var(--surface); border-radius: 16px; box-shadow: var(--shadow); }
+
+/* header: the decision first */
+.memo-head { padding: 32px 28px 8px; }
+h1 { font-size: 34px; line-height: 1.08; font-weight: 400; letter-spacing: -.025em;
+  margin: 0 0 12px; max-width: 24ch; text-wrap: balance; }
+.ctx { margin: 0; color: var(--muted); font-size: 15px; max-width: 65ch; }
+.decision-box { margin-top: 20px; background: var(--accent-soft); border-radius: 10px;
+  padding: 16px; font-size: 15.5px; line-height: 1.5; max-width: 72ch; }
+.decision-box b { font-weight: 600; color: var(--accent-press); }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 20px; margin-top: 16px; font-size: 13px;
+  line-height: 1.4; color: var(--muted); }
+.meta .num, .meta .mono { color: var(--ink); }
+.memo-body { padding: 4px 28px 28px; }
+
+/* claim-type filter: hidden without JS */
+.type-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 16px 0 8px; }
+.type-filter[hidden] { display: none; }
+.filter-l { font-size: 13px; color: var(--muted); margin-right: 4px; }
+.chip { font: inherit; font-size: 13px; font-weight: 500; line-height: 1.3; min-height: 32px;
+  padding: 5px 12px; border-radius: 999px; border: 1.5px solid var(--hairline);
+  background: var(--surface); color: var(--muted); cursor: pointer;
+  transition: background-color .15s ease-out, color .15s ease-out; }
+.chip:hover { background: var(--accent-soft); color: var(--ink); }
+.chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+body[data-filter] main [data-types] { opacity: .32; transition: opacity .2s ease-out; }
+body[data-filter] main [data-types].hl { opacity: 1; }
+
+/* text */
+h2 { font-size: 21px; line-height: 1.3; font-weight: 500; letter-spacing: -.015em;
+  margin: 36px 0 12px; }
+h3 { font-size: 17px; line-height: 1.3; font-weight: 500; margin: 24px 0 8px; }
+p, ul, ol { margin: 0 0 12px; max-width: 72ch; }
+ul, ol { padding-left: 20px; }
+li { margin: 4px 0; }
+strong { font-weight: 600; }
+blockquote { margin: 0 0 12px; padding: 0; color: var(--muted); font-size: 14px; max-width: 72ch; }
+blockquote p { margin: 0; }
+code, pre { font-family: var(--mono); font-size: 13px; }
+pre { overflow-x: auto; padding: 12px; background: var(--surface-2); border-radius: 10px; }
+
+/* citations */
+.cites { display: inline; }
+a.cite { font-family: var(--mono); font-size: 12px; line-height: 1.5; font-weight: 400;
+  color: var(--muted); background: var(--surface-2); border: 1px solid transparent;
+  border-radius: 6px; padding: 0 6px; text-decoration: none; white-space: nowrap; cursor: pointer;
+  transition: color .15s ease-out, background-color .15s ease-out; }
+a.cite:hover { color: var(--accent-press); background: var(--accent-soft); }
+a.cite.as { background: none; border: 1px dashed var(--hairline); }
+a.cite .tag { font-family: var(--font); font-size: 12px; font-weight: 500; margin-left: 4px;
+  color: var(--warn-ink); }
+a.cite.t-conclusion .tag { color: var(--accent-press); }
+#claims a.cite .tag, .memo a.cite .tag { padding: 0; background: none; border-radius: 0; }
+
+/* key figures: rows, not cards */
+.blk { margin: 12px 0 24px; padding: 0; }
+.blk figcaption { font-size: 14px; line-height: 1.4; color: var(--muted); margin: 0 0 12px; }
+.blk-unit { color: var(--muted); }
+.figs { border-top: 1px solid var(--hairline); display: grid; grid-template-columns: minmax(132px, fit-content(45%)) minmax(0, 1fr); column-gap: 24px; }
+.fig { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; column-gap: 24px;
+  padding: 12px 0; border-bottom: 1px solid var(--hairline); align-items: baseline; }
+.fig-v { font-size: 36px; line-height: 1.1; font-weight: 300; letter-spacing: -.03em; white-space: nowrap; }
+.fig-v .u { font-size: inherit; }
+.fig-v.long { font-size: 22px; line-height: 1.25; letter-spacing: -.01em; white-space: normal; text-wrap: balance; }
+.fig-t { font-size: 15px; line-height: 1.5; }
+.fig-n { display: block; color: var(--muted); font-size: 13px; line-height: 1.4; margin-top: 2px; }
+a.v { color: inherit; text-decoration: none; }
+a.v:hover { text-decoration: underline; text-decoration-color: var(--hairline); }
+
+/* bars, funnel, slope: HTML rows */
+.blk-rows { display: grid; gap: 12px; }
+.blk-row { display: grid; grid-template-columns: 160px minmax(0, 1fr) 84px; gap: 12px;
+  align-items: center; font-size: 14px; line-height: 1.3; }
+.blk-l { overflow-wrap: anywhere; }
+.blk-track { display: block; height: 20px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+.blk-bar { display: block; height: 100%; border-radius: 4px; transform-origin: left;
+  animation: grow .9s var(--arrive); }
+.blk-bar.violet { background: var(--violet); }
+.blk-bar.lavender { background: var(--lavender); }
+.blk-bar.plain { background: color-mix(in srgb, var(--muted) 45%, transparent); }
+.blk-bar.mark { background: var(--accent-mark); }
+.blk-v { text-align: right; font-weight: 500; white-space: nowrap; }
+.blk-v .u { font-weight: 400; color: var(--muted); }
+.blk-funnel .blk-track { height: 24px; border-radius: 6px; }
+.blk-slope .blk-row { grid-template-columns: 160px minmax(0, 1fr); align-items: start; }
+.blk-pair { display: grid; grid-template-columns: 56px minmax(0, 1fr) 84px; gap: 12px; align-items: center; }
+.blk-pair + .blk-pair { margin-top: 4px; }
+.blk-slope .blk-row > .blk-pair { grid-column: 2; }
+.blk-slope .blk-row > .blk-l { grid-row: span 2; padding-top: 2px; }
+.blk-c { color: var(--muted); font-size: 13px; }
+@keyframes grow { from { transform: scaleX(.02); } }
+
+/* line: marks in SVG, values and labels in HTML */
+.blk-plotwrap { position: relative; }
+.blk-tick { position: absolute; left: 0; transform: translateY(-50%); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.blk-plot { display: block; width: 100%; height: auto; overflow: visible; }
+.blk-plot .grid { stroke: var(--hairline); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.blk-plot .trace { fill: none; stroke: var(--muted); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.blk-plot .seg { fill: none; stroke: var(--accent-mark); stroke-width: 3; vector-effect: non-scaling-stroke; }
+.blk-plot .pt { fill: var(--surface); stroke: var(--muted); stroke-width: 2; }
+.blk-plot .pt.f { fill: var(--accent-mark); stroke: var(--accent-mark); }
+.blk-points { list-style: none; margin: 8px 0 0; padding: 0; display: grid; text-align: center; max-width: none; }
+.blk-pt { display: flex; flex-direction: column; margin: 0; min-width: 0; }
+.blk-pt .blk-v { text-align: center; font-size: 14px; font-weight: 500; }
+.blk-pt .blk-l { font-size: 12px; color: var(--muted); }
+.blk-pt.focal .blk-v:not(.neg):not(.pos) { color: var(--accent); }
+
+/* tables: decision table and table blocks */
+.table-wrap { overflow-x: auto; margin: 0 0 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.45; }
+th, td { text-align: left; vertical-align: top; padding: 9px 8px; border-bottom: 1px solid var(--hairline); }
+th { font-size: 13px; font-weight: 500; color: var(--muted); }
+td.chosen, th.chosen, tr.focal td { background: var(--accent-soft); }
+td.chosen:first-child, tr.focal td:first-child { font-weight: 500; }
+.chosen-mark { font-size: 12px; font-weight: 600; color: var(--accent-press); white-space: nowrap; margin-left: 4px; }
+
+/* accepted risks */
+.risks { display: grid; gap: 8px; margin: 0 0 12px; }
+.risk { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 10px;
+  background: var(--surface-2); font-size: 15px; line-height: 1.5; }
+.risk-ids { display: flex; flex-direction: column; gap: 4px; flex: none; }
+.risk-id { font-family: var(--mono); font-size: 12px; line-height: 1.5; color: var(--warn);
+  border: 1px solid currentColor; border-radius: 6px; padding: 0 6px; margin-top: 2px; }
+.risk-t { min-width: 0; }
+
+/* the claim list: the no-JS fallback for the popover, kept quiet */
+#claims { margin-top: 48px; padding: 0 8px; color: var(--ink); }
+#claims h2 { font-size: 17px; margin: 0 0 8px; }
+.claims-note { color: var(--muted); font-size: 13px; line-height: 1.4; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; padding: 0; list-style: none; }
+.tag { font-size: 12px; font-weight: 500; border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.tag.t-fact, .t-fact > header .tag { background: var(--pos-soft); color: var(--pos); }
+.tag.t-conclusion, .t-conclusion > header .tag { background: var(--accent-soft); color: var(--accent-press); }
+.tag.t-assumption, .tag.t-gap, .tag.t-hypothesis, .tag.t-forecast, .tag.t-synthetic,
+.t-assumption > header .tag, .t-gap > header .tag, .t-hypothesis > header .tag,
+.t-forecast > header .tag, .t-synthetic > header .tag { background: var(--warn-soft); color: var(--warn-ink); }
+.claim { padding: 12px 0; border-top: 1px solid var(--hairline); font-size: 14px; line-height: 1.5;
+  scroll-margin-top: 16px; }
+.claim:target { background: var(--accent-soft); border-radius: 10px; padding: 12px; }
+.claim header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.cid { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.status { color: var(--muted); font-size: 12px; }
+.status.bad { color: var(--warn); }
+.ctext { margin: 0 0 4px; }
+.note { color: var(--muted); font-size: 13px; margin: 0 0 6px; }
+.claim dl { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 12px; font-size: 13px; }
+.claim dt { color: var(--muted); }
+.claim dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.claim dd blockquote { font-family: var(--mono); font-size: 12px; color: var(--ink); margin: 0; }
+footer { margin-top: 32px; padding: 0 8px; color: var(--muted); font-size: 13px; line-height: 1.4; }
+footer code { font-size: 12px; }
+
+/* claim card popover */
+.ccard { position: fixed; z-index: 60; max-width: 380px; max-height: calc(100vh - 24px); overflow: auto;
+  background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-lg); padding: 14px 16px 16px;
+  opacity: 0; transform: translateY(6px);
+  transition: opacity .18s ease-out, transform .22s var(--arrive); }
+.ccard.on { opacity: 1; transform: none; }
+.ccard[hidden] { display: none; }
+.cc-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.cc-id { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.cc-status { font-size: 12px; color: var(--warn); }
+.cc-x { margin-left: auto; width: 32px; height: 32px; flex: none; display: grid; place-items: center;
+  border-radius: 999px; border: 1.5px solid var(--hairline); background: var(--surface);
+  color: var(--muted); cursor: pointer; padding: 0; }
+.cc-x:hover { background: var(--accent-soft); color: var(--ink); }
+.cc-x svg { width: 14px; height: 14px; }
+.cc-text { margin: 0 0 10px; font-size: 15px; line-height: 1.5; }
+.cc-src { font-size: 13px; line-height: 1.5; color: var(--muted); }
+.cc-src a { color: var(--accent-press); }
+.cc-quote { margin: 10px 0 0; padding: 8px 12px; background: var(--surface-2); border-radius: 10px;
+  font-family: var(--mono); font-size: 12px; line-height: 1.5; white-space: pre-wrap; color: var(--ink); }
+.cc-sup { margin-top: 8px; font-size: 13px; color: var(--muted); }
+
+@media (max-width: 980px) { main { max-width: 760px; } }
+@media (max-width: 560px) {
+  main { padding: 16px 12px 48px; }
+  .memo-head { padding: 24px 16px 4px; }
+  .memo-body { padding: 4px 16px 20px; }
+  h1 { font-size: 28px; }
+  .fig { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .blk-row { grid-template-columns: minmax(0, 1fr) 84px; gap: 4px 12px; }
+  .blk-row > .blk-l { grid-column: 1 / -1; }
+  .blk-slope .blk-row { grid-template-columns: minmax(0, 1fr); }
+  .blk-slope .blk-row > .blk-pair { grid-column: 1; }
+  .blk-slope .blk-row > .blk-l { grid-row: auto; }
+  .chip { min-height: 44px; }
+  .claim dl { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+@media print {
+  .ccard, .type-filter, .legend { display: none !important; }
+  html, body { background: #fff; }
+  .memo { box-shadow: none; }
+}
+</style>
+</head>
+<body>
+<main>
+<article class="memo">
+<header class="memo-head">
+<h1>Исправить обещание рекламы performance_ads, а не откатывать онбординг</h1>
+<p class="ctx">Семейный компас: падение удержания после нового онбординга</p>
+<div class="decision-box" data-types="assumption conclusion"><b>Решение.</b> Не откатывать онбординг v2. Исправить обещание рекламы в performance_ads и проверить эффект holdout-тестом; бюджет канала держать урезанным до результата теста. Владелец — лид продукта <span class="cites"><a class="cite t-assumption as" href="#C101" data-c="C101">C101<span class="tag">допущение</span></a> <a class="cite t-conclusion" href="#C085" data-c="C085">C085<span class="tag">вывод</span></a></span>.</div>
+<div class="meta"><span>Проверка: <span class="mono">2027-02-15</span></span><span>Факты: <span class="num">26</span></span><span>Допущения: <span class="num">6</span></span><span>Принятые риски: <span class="num">0</span></span></div>
+</header>
+<div class="memo-body">
+<nav class="type-filter" hidden aria-label="Подсветить утверждения по типу"><span class="filter-l">Показать опору:</span><button type="button" class="chip t-fact" data-type="fact" aria-pressed="false">факты</button><button type="button" class="chip t-hypothesis" data-type="hypothesis" aria-pressed="false">гипотезы</button><button type="button" class="chip t-assumption" data-type="assumption" aria-pressed="false">допущения</button><button type="button" class="chip t-gap" data-type="gap" aria-pressed="false">пробелы</button><button type="button" class="chip t-conclusion" data-type="conclusion" aria-pressed="false">выводы</button></nav>
+<blockquote><p>Одна страница для директора по продукту. Каждое утверждение цитирует [C...]; полные документы по ссылкам внизу.</p></blockquote>
+<h2>Ключевые цифры</h2>
+<figure class="blk blk-tiles"><figcaption><span class="blk-title">Провал удержания сосредоточен в одном канале и он не окупается</span></figcaption><div class="figs"><div class="fig" data-types="fact"><div class="fig-v num"><a class="v" href="#C104">52,1</a><span class="u">%</span></div><div class="fig-t"><span class="fig-l">Удержание 2-го месяца, performance_ads</span><span class="cites"><a class="cite t-fact" href="#C104" data-c="C104">C104</a> <a class="cite t-fact" href="#C096" data-c="C096">C096</a> <a class="cite t-fact" href="#C022" data-c="C022">C022</a></span><small class="fig-n">против 89% в organic и 91,6% в referral</small></div></div><div class="fig" data-types="conclusion"><div class="fig-v num neg"><a class="v" href="#C086">−69</a><span class="u"> RUB</span></div><div class="fig-t"><span class="fig-l">Вклад семьи из канала за срок жизни</span><span class="cites"><a class="cite t-conclusion" href="#C086" data-c="C086">C086<span class="tag">вывод</span></a></span><small class="fig-n">при выручке 581 ₽ и привлечении 650 ₽</small></div></div><div class="fig" data-types="fact"><div class="fig-v num"><a class="v" href="#C079">792</a><span class="u"> RUB</span></div><div class="fig-t"><span class="fig-l">Вклад семьи из остальных каналов</span><span class="cites"><a class="cite t-fact" href="#C079" data-c="C079">C079</a></span><small class="fig-n">канал в разы хуже по экономике</small></div></div><div class="fig" data-types="fact"><div class="fig-v num"><a class="v" href="#C100">40,5</a><span class="u">%</span></div><div class="fig-t"><span class="fig-l">Неоплатившие 2-й месяц из performance_ads</span><span class="cites"><a class="cite t-fact" href="#C100" data-c="C100">C100</a></span><small class="fig-n">доля всех ушедших семей августа 2026</small></div></div></div></figure>
+<h2>Почему</h2>
+<ul><li data-types="conclusion fact">Удержание в organic и referral после онбординга v2 не изменилось (89% против 90% до v2), а провал сосредоточен в новом канале — откат онбординга не трогает источник оттока <span class="cites"><a class="cite t-fact" href="#C096" data-c="C096">C096</a> <a class="cite t-fact" href="#C097" data-c="C097">C097</a> <a class="cite t-conclusion" href="#C085" data-c="C085">C085<span class="tag">вывод</span></a></span>.</li><li data-types="fact">Уходящие из performance_ads жалуются на несовпадение рекламы с продуктом: 35,3% — на рекламу, 35,3% — на «не работает по номеру телефона», и только 5,9% — на приложение-компаньон <span class="cites"><a class="cite t-fact" href="#C040" data-c="C040">C040</a> <a class="cite t-fact" href="#C041" data-c="C041">C041</a> <a class="cite t-fact" href="#C044" data-c="C044">C044</a></span>.</li><li data-types="conclusion fact">Удержание 52% для платного трафика — норма, а не аномалия: первое продление в подписочных приложениях оплачивают 50–85% <span class="cites"><a class="cite t-conclusion" href="#C072" data-c="C072">C072<span class="tag">вывод</span></a> <a class="cite t-fact" href="#C070" data-c="C070">C070</a> <a class="cite t-fact" href="#C071" data-c="C071">C071</a></span>.</li></ul>
+<h2>Какие варианты рассматривали</h2>
+<ul><li data-types="conclusion">Оставить как есть: отток держится 7,7% четвёртый месяц при цели 4–4,5%, канал убыточен <span class="cites"><a class="cite t-conclusion" href="#C092" data-c="C092">C092<span class="tag">вывод</span></a> <a class="cite t-conclusion" href="#C086" data-c="C086">C086<span class="tag">вывод</span></a></span>.</li><li data-types="fact">Закрыть канал полностью: режет половину притока новых семей (50,2%) <span class="cites"><a class="cite t-fact" href="#C031" data-c="C031">C031</a></span>.</li><li data-types="conclusion">Откатить онбординг v2: провала в старых каналах нет <span class="cites"><a class="cite t-conclusion" href="#C085" data-c="C085">C085<span class="tag">вывод</span></a></span>.</li><li data-types="conclusion">Сократить закупку без теста: нельзя отделить эффект креатива от эффекта объёма <span class="cites"><a class="cite t-conclusion" href="#C045" data-c="C045">C045<span class="tag">вывод</span></a></span>.</li></ul>
+<h2>Продукт</h2>
+<ul><li data-types="conclusion fact">Направление: убрать из рекламы обещания «без установки» и «просто по номеру», честно описать роль приложения-компаньона, сравнить удержание нового и старого креатива на holdout <span class="cites"><a class="cite t-fact" href="#C040" data-c="C040">C040</a> <a class="cite t-fact" href="#C041" data-c="C041">C041</a> <a class="cite t-conclusion" href="#C045" data-c="C045">C045<span class="tag">вывод</span></a></span>.</li><li data-types="assumption conclusion fact">Отказы: не откатываем онбординг v2, не закрываем канал до теста, не идём в техническое качество приложения в этом квартале <span class="cites"><a class="cite t-conclusion" href="#C085" data-c="C085">C085<span class="tag">вывод</span></a> <a class="cite t-fact" href="#C031" data-c="C031">C031</a> <a class="cite t-assumption as" href="#C004" data-c="C004">C004<span class="tag">допущение</span></a></span>.</li></ul>
+<h2>Коммуникация</h2>
+<ul><li data-types="fact">Ключевое сообщение: «Семейный компас» показывает, где ребёнок, присылает уведомления и даёт кнопку SOS; на телефон ребёнка ставится приложение-компаньон, и ребёнок видит, что геолокация включена <span class="cites"><a class="cite t-fact" href="#C009" data-c="C009">C009</a></span>.</li><li data-types="fact">Проверка обещаний: два текущих рекламных обещания («по номеру телефона», «без установки») продукт выполнить не может — их убираем <span class="cites"><a class="cite t-fact" href="#C009" data-c="C009">C009</a> <a class="cite t-fact" href="#C040" data-c="C040">C040</a></span>.</li></ul>
+<h2>Как проверим</h2>
+<ul><li data-types="assumption conclusion fact">Удержание второго месяца в performance_ads: с 52,1% <span class="cites"><a class="cite t-fact" href="#C104" data-c="C104">C104</a></span> к 70–80% <span class="cites"><a class="cite t-assumption as" href="#C105" data-c="C105">C105<span class="tag">допущение</span></a></span>, сравнение новой и старой рекламы на holdout <span class="cites"><a class="cite t-conclusion" href="#C045" data-c="C045">C045<span class="tag">вывод</span></a></span>, наблюдение 2 месяца <span class="cites"><a class="cite t-assumption as" href="#C106" data-c="C106">C106<span class="tag">допущение</span></a></span>, проверка 15 февраля 2027.</li></ul>
+<h2>Риски и открытые вопросы</h2>
+<div class="risks"><div class="risk" data-types="hypothesis"><div class="risk-t">Если удержание не вырастет, провал не в рекламе, а в продукте — тогда канал закрываем <span class="cites"><a class="cite t-hypothesis as" href="#C069" data-c="C069">C069<span class="tag">гипотеза</span></a></span>.</div></div><div class="risk" data-types="gap"><div class="risk-t">Расчёт окупаемости занижает срок жизни когорт и не учитывает себестоимость и возвраты <span class="cites"><a class="cite t-gap as" href="#C059" data-c="C059">C059<span class="tag">пробел</span></a></span>.</div></div><div class="risk" data-types="gap"><div class="risk-t">Доля провала удержания вне performance_ads неизвестна <span class="cites"><a class="cite t-gap as" href="#C016" data-c="C016">C016<span class="tag">пробел</span></a></span>.</div></div></div>
+<section class="decision"><h2>Таблица решения</h2><div class="table-wrap"><table class="dt"><thead><tr><th>Критерий</th><th>В1. Оставить, с порогами и датой</th><th>В2. Закрыть performance_ads</th><th>В3. Откатить онбординг v2</th><th>В4. Новый креатив + holdout</th><th>В5. Сократить закупку до нового креатива</th></tr></thead><tbody><tr data-types="conclusion"><td>Эффект на отток</td><td data-types="conclusion">нет, держится 7,6–7,7% <span class="cites"><a class="cite t-conclusion" href="#C092" data-c="C092">C092<span class="tag">вывод</span></a></span></td><td data-types="conclusion">возможно высокий, канал уже не окупается: вклад -69 ₽ на семью <span class="cites"><a class="cite t-conclusion" href="#C086" data-c="C086">C086<span class="tag">вывод</span></a></span></td><td data-types="conclusion">неизвестен, вероятно малый: провал в новом канале <span class="cites"><a class="cite t-conclusion" href="#C085" data-c="C085">C085<span class="tag">вывод</span></a></span></td><td data-types="conclusion">средний–высокий, бьёт в источник провала <span class="cites"><a class="cite t-conclusion" href="#C085" data-c="C085">C085<span class="tag">вывод</span></a></span></td><td data-types="conclusion">средний, вероятно в источник провала <span class="cites"><a class="cite t-conclusion" href="#C085" data-c="C085">C085<span class="tag">вывод</span></a></span></td></tr><tr data-types="assumption conclusion fact"><td>Скорость и обратимость</td><td data-types="conclusion">мгновенно, но цель не достигается <span class="cites"><a class="cite t-conclusion" href="#C092" data-c="C092">C092<span class="tag">вывод</span></a></span></td><td data-types="fact">быстро, необратимо по притоку <span class="cites"><a class="cite t-fact" href="#C031" data-c="C031">C031</a></span></td><td data-types="assumption">быстро и обратимо <span class="cites"><a class="cite t-assumption as" href="#C002" data-c="C002">C002<span class="tag">допущение</span></a></span></td><td data-types="assumption">средняя: недели на тест <span class="cites"><a class="cite t-assumption as" href="#C004" data-c="C004">C004<span class="tag">допущение</span></a></span></td><td data-types="assumption">высокая: правка и сокращение сразу <span class="cites"><a class="cite t-assumption as" href="#C003" data-c="C003">C003<span class="tag">допущение</span></a></span></td></tr><tr data-types="assumption conclusion fact"><td>Приток и MRR</td><td data-types="conclusion fact">высокий приток сохраняется <span class="cites"><a class="cite t-fact" href="#C098" data-c="C098">C098</a></span>, но приносит убыток по вкладу <span class="cites"><a class="cite t-conclusion" href="#C086" data-c="C086">C086<span class="tag">вывод</span></a></span></td><td data-types="conclusion fact">резко падает: уходит половина новых семей <span class="cites"><a class="cite t-fact" href="#C031" data-c="C031">C031</a></span>, зато уходит убыточный трафик <span class="cites"><a class="cite t-conclusion" href="#C086" data-c="C086">C086<span class="tag">вывод</span></a></span></td><td data-types="fact">почти не меняется <span class="cites"><a class="cite t-fact" href="#C020" data-c="C020">C020</a></span></td><td data-types="assumption">часть закупки уходит на holdout <span class="cites"><a class="cite t-assumption as" href="#C003" data-c="C003">C003<span class="tag">допущение</span></a></span></td><td data-types="fact">приток падает пропорционально сокращению <span class="cites"><a class="cite t-fact" href="#C098" data-c="C098">C098</a></span></td></tr><tr data-types="fact"><td>Риск для ценности продукта</td><td data-types="fact">накапливается: семьи ждут «без установки» <span class="cites"><a class="cite t-fact" href="#C009" data-c="C009">C009</a></span></td><td>нет</td><td data-types="fact">возвращает барьер до оплаты <span class="cites"><a class="cite t-fact" href="#C009" data-c="C009">C009</a></span></td><td data-types="fact">снижает: реклама перестаёт обещать «без установки» <span class="cites"><a class="cite t-fact" href="#C009" data-c="C009">C009</a></span></td><td data-types="fact">снижает: реклама перестаёт обещать «без установки» <span class="cites"><a class="cite t-fact" href="#C009" data-c="C009">C009</a></span></td></tr></tbody></table></div></section>
+<h2>Материалы</h2>
+<blockquote><p>Полные документы: brief.md, options.md, table.md, product.md, comms.md, verification.md, decisions.md, claims.md (все утверждения с цитатами и источниками), sources/ (снимки источников).</p></blockquote>
+</div>
+</article>
+<section id="claims" aria-labelledby="claims-h">
+<h2 id="claims-h">Утверждения, на которые ссылается записка</h2>
+<p class="claims-note">Утверждений в записке и её опорах: 41 (факт — 26, гипотеза — 1, допущение — 6, пробел — 3, вывод — 5). Номер утверждения в тексте открывает его карточку: тип, источник, место в источнике и цитату.</p>
+<ul class="legend"><li><span class="tag t-fact">факт</span></li><li><span class="tag t-hypothesis">гипотеза</span></li><li><span class="tag t-assumption">допущение</span></li><li><span class="tag t-gap">пробел</span></li><li><span class="tag t-conclusion">вывод</span></li></ul>
+<article class="claim t-assumption" id="C101"><header><span class="cid">C101</span><span class="tag">допущение</span><span class="status">действует</span></header><p class="ctext">Руководитель выбирает Вариант 4: исправить обещание рекламы и проверить его holdout-тестом.</p><p class="note">Допущение: принято без проверки по источнику; если оно неверно, вывод может измениться.</p><dl></dl></article>
+<article class="claim t-conclusion" id="C085"><header><span class="cid">C085</span><span class="tag">вывод</span><span class="status">действует</span></header><p class="ctext">Провал удержания второго месяца сосредоточен в канале performance_ads: около 52% против 89–94% в organic, referral и operator_bundle, а удержание старых каналов после онбординга v2 не изменилось (organic 89% против 90% до v2).</p><p class="note">Вывод: сделан из утверждений, на которые он опирается (см. ниже).</p><dl><dt>Опирается на</dt><dd><span class="cites"><a class="cite t-fact" href="#C025" data-c="C025">C025</a> <a class="cite t-fact" href="#C020" data-c="C020">C020</a> <a class="cite t-fact" href="#C075" data-c="C075">C075</a> <a class="cite t-fact" href="#C084" data-c="C084">C084</a></span></dd></dl></article>
+<article class="claim t-fact" id="C025"><header><span class="cid">C025</span><span class="tag">факт</span><span class="status bad">отозвано</span></header><p class="ctext">У когорт канала performance_ads мая–сентября 2026 года доля оплативших следующий месяц держалась на 51,7–52,4%: 52,1% в мае, 51,9% в июне, 52,3% в июле, 52,4% в августе, 51,7% в сентябре.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S004 · q1_channels.txt<br>файл: <a href="analysis/q1_channels.txt">analysis/q1_channels.txt</a>; снимок <a href="sources/S004.md">sources/S004.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>ads_2026-05_m1_pct</dd><dt>Цитата</dt><dd><blockquote>«FIGURE ads_2026-05_m1_pct = 52.1 % | period 2026-05»</blockquote></dd><dt>На дату</dt><dd>2026-09 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата не подтверждает утверждение (оценка: jev)</dd></dl></article>
+<article class="claim t-fact" id="C020"><header><span class="cid">C020</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В мае–сентябре 2026 года доля новых платящих семей organic, оплативших следующий месяц, составила 89,0%.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S004 · q1_channels.txt<br>файл: <a href="analysis/q1_channels.txt">analysis/q1_channels.txt</a>; снимок <a href="sources/S004.md">sources/S004.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>2026-05..2026-09_organic_m1_pct</dd><dt>Цитата</dt><dd><blockquote>«FIGURE 2026-05..2026-09_organic_m1_pct = 89 % | period 2026-05..2026-09»</blockquote></dd><dt>На дату</dt><dd>2026-09 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: jev)</dd></dl></article>
+<article class="claim t-fact" id="C075"><header><span class="cid">C075</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В мае–сентябре 2026 года доля новых платящих семей organic, оплативших следующий месяц, составила 89%.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S004 · q1_channels.txt<br>файл: <a href="analysis/q1_channels.txt">analysis/q1_channels.txt</a>; снимок <a href="sources/S004.md">sources/S004.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>2026-05..2026-09_organic_m1_pct</dd><dt>Цитата</dt><dd><blockquote>«FIGURE 2026-05..2026-09_organic_m1_pct = 89 % | period 2026-05..2026-09»</blockquote></dd><dt>На дату</dt><dd>2026-10</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: jev)</dd></dl></article>
+<article class="claim t-fact" id="C084"><header><span class="cid">C084</span><span class="tag">факт</span><span class="status bad">устарело</span></header><p class="ctext">В ноябре 2025 – апреле 2026 года доля новых платящих семей organic, оплативших следующий месяц, составила 90%.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S004 · q1_channels.txt<br>файл: <a href="analysis/q1_channels.txt">analysis/q1_channels.txt</a>; снимок <a href="sources/S004.md">sources/S004.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>2025-11..2026-04_organic_m1_pct</dd><dt>Цитата</dt><dd><blockquote>«FIGURE 2025-11..2026-04_organic_m1_pct = 90 % | period 2025-11..2026-04»</blockquote></dd><dt>На дату</dt><dd>2026-04</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: jev)</dd></dl></article>
+<article class="claim t-fact" id="C104"><header><span class="cid">C104</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В мае 2026 года в когорте канала performance_ads доля оплативших следующий месяц составила 52,1%.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S004 · q1_channels.txt<br>файл: <a href="analysis/q1_channels.txt">analysis/q1_channels.txt</a>; снимок <a href="sources/S004.md">sources/S004.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>ads_2026-05_m1_pct</dd><dt>Цитата</dt><dd><blockquote>«FIGURE ads_2026-05_m1_pct = 52.1 % | period 2026-05»</blockquote></dd><dt>На дату</dt><dd>2026-05 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-fact" id="C096"><header><span class="cid">C096</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В мае–сентябре 2026 года доля новых платящих семей organic, оплативших следующий месяц, составила 89%.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S004 · q1_channels.txt<br>файл: <a href="analysis/q1_channels.txt">analysis/q1_channels.txt</a>; снимок <a href="sources/S004.md">sources/S004.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>2026-05..2026-09_organic_m1_pct</dd><dt>Цитата</dt><dd><blockquote>«89 %»</blockquote></dd><dt>На дату</dt><dd>2026-09 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-fact" id="C022"><header><span class="cid">C022</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В мае–сентябре 2026 года доля новых платящих семей referral, оплативших следующий месяц, составила 91,6%.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S004 · q1_channels.txt<br>файл: <a href="analysis/q1_channels.txt">analysis/q1_channels.txt</a>; снимок <a href="sources/S004.md">sources/S004.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>2026-05..2026-09_referral_m1_pct</dd><dt>Цитата</dt><dd><blockquote>«FIGURE 2026-05..2026-09_referral_m1_pct = 91.6 % | period 2026-05..2026-09»</blockquote></dd><dt>На дату</dt><dd>2026-09 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: jev)</dd></dl></article>
+<article class="claim t-conclusion" id="C086"><header><span class="cid">C086</span><span class="tag">вывод</span><span class="status">действует</span></header><p class="ctext">Канал performance_ads не окупает привлечение: к октябрю 2026 года семья из него приносит 581 ₽ выручки при 650 ₽ затрат (вклад -69 ₽), тогда как семья из остальных каналов — 992 ₽ при 200 ₽ (+792 ₽).</p><p class="note">Вывод: сделан из утверждений, на которые он опирается (см. ниже).</p><dl><dt>Опирается на</dt><dd><span class="cites"><a class="cite t-fact" href="#C048" data-c="C048">C048</a> <a class="cite t-fact" href="#C052" data-c="C052">C052</a> <a class="cite t-fact" href="#C078" data-c="C078">C078</a> <a class="cite t-fact" href="#C079" data-c="C079">C079</a></span></dd></dl></article>
+<article class="claim t-fact" id="C048"><header><span class="cid">C048</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В расчёте на когортах мая–сентября 2026 года вклад семьи из performance_ads составил -69 ₽.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S007 · q3_payback.txt<br>файл: <a href="analysis/q3_payback.txt">analysis/q3_payback.txt</a>; снимок <a href="sources/S007.md">sources/S007.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>ads_contribution_per_family_2026-05_2026-09</dd><dt>Цитата</dt><dd><blockquote>«FIGURE ads_contribution_per_family_2026-05_2026-09 = -69 RUB | period 2026-05..2026-09»</blockquote></dd><dt>На дату</dt><dd>2026-09 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: jev)</dd></dl></article>
+<article class="claim t-fact" id="C052"><header><span class="cid">C052</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">По расчёту на когортах мая–сентября 2026 года, стоимость привлечения семьи в performance_ads составила 650 ₽, в остальных каналах — 200 ₽.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S007 · q3_payback.txt<br>файл: <a href="analysis/q3_payback.txt">analysis/q3_payback.txt</a>; снимок <a href="sources/S007.md">sources/S007.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>ads_cac_per_family, other_cac_per_family</dd><dt>Цитата</dt><dd><blockquote>«FIGURE ads_cac_per_family = 650 RUB | period 2026-05..2026-09 ... FIGURE other_cac_per_family = 200 RUB | period 2026-05..2026-09»</blockquote></dd><dt>На дату</dt><dd>2026-10</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-fact" id="C078"><header><span class="cid">C078</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">По расчёту на когортах мая–сентября 2026 года семья из performance_ads приносит 581 ₽ выручки за срок жизни.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S007 · q3_payback.txt<br>файл: <a href="analysis/q3_payback.txt">analysis/q3_payback.txt</a>; снимок <a href="sources/S007.md">sources/S007.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>ads_revenue_per_family_2026-05_2026-09</dd><dt>Цитата</dt><dd><blockquote>«FIGURE ads_revenue_per_family_2026-05_2026-09 = 581 RUB | period 2026-05..2026-09»</blockquote></dd><dt>На дату</dt><dd>2026-10</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: jev)</dd></dl></article>
+<article class="claim t-fact" id="C079"><header><span class="cid">C079</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">По расчёту на когортах мая–сентября 2026 года семья из остальных каналов приносит вклад 792 ₽ за срок жизни.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S007 · q3_payback.txt<br>файл: <a href="analysis/q3_payback.txt">analysis/q3_payback.txt</a>; снимок <a href="sources/S007.md">sources/S007.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>other_contribution_per_family_2026-05_2026-09</dd><dt>Цитата</dt><dd><blockquote>«FIGURE other_contribution_per_family_2026-05_2026-09 = 792 RUB | period 2026-05..2026-09»</blockquote></dd><dt>На дату</dt><dd>2026-10</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-fact" id="C100"><header><span class="cid">C100</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">Семьи когорты performance_ads августа 2026, не оплатившие второй месяц, составили 40,5% всех ушедших семей августа 2026.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S005 · q1_churn_mix.txt<br>файл: <a href="analysis/q1_churn_mix.txt">analysis/q1_churn_mix.txt</a>; снимок <a href="sources/S005.md">sources/S005.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>ads_lost_share_of_churned_2026-08</dd><dt>Цитата</dt><dd><blockquote>«40.5 %»</blockquote></dd><dt>На дату</dt><dd>2026-08 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-fact" id="C097"><header><span class="cid">C097</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В ноябре 2025 – апреле 2026 года доля новых платящих семей organic, оплативших следующий месяц, составила 90%.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S004 · q1_channels.txt<br>файл: <a href="analysis/q1_channels.txt">analysis/q1_channels.txt</a>; снимок <a href="sources/S004.md">sources/S004.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>2025-11..2026-04_organic_m1_pct</dd><dt>Цитата</dt><dd><blockquote>«90 %»</blockquote></dd><dt>На дату</dt><dd>2026-04 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-fact" id="C040"><header><span class="cid">C040</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">За февраль–октябрь 2026 года 6 из 17 обращений канала performance_ads (35,3%) — жалобы на несоответствие рекламе.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S006 · q2_tickets.txt<br>файл: <a href="analysis/q2_tickets.txt">analysis/q2_tickets.txt</a>; снимок <a href="sources/S006.md">sources/S006.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>ads_tickets_ads_mismatch_share</dd><dt>Цитата</dt><dd><blockquote>«FIGURE ads_tickets_ads_mismatch_share = 35.3 % | period 2026-02..2026-10»</blockquote></dd><dt>На дату</dt><dd>2026-10 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-fact" id="C041"><header><span class="cid">C041</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">За февраль–октябрь 2026 года 6 из 17 обращений канала performance_ads (35,3%) связаны с тем, что «не работает по номеру телефона».</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S006 · q2_tickets.txt<br>файл: <a href="analysis/q2_tickets.txt">analysis/q2_tickets.txt</a>; снимок <a href="sources/S006.md">sources/S006.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>ads_tickets_no_number_lookup_share</dd><dt>Цитата</dt><dd><blockquote>«FIGURE ads_tickets_no_number_lookup_share = 35.3 % | period 2026-02..2026-10»</blockquote></dd><dt>На дату</dt><dd>2026-10 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-fact" id="C044"><header><span class="cid">C044</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">За февраль–октябрь 2026 года в канале performance_ads только 1 из 17 обращений (5,9%) касалось приложения-компаньона.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S006 · q2_tickets.txt<br>файл: <a href="analysis/q2_tickets.txt">analysis/q2_tickets.txt</a>; снимок <a href="sources/S006.md">sources/S006.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>ads_tickets_companion_app_share</dd><dt>Цитата</dt><dd><blockquote>«FIGURE ads_tickets_companion_app_share = 5.9 % | period 2026-02..2026-10»</blockquote></dd><dt>На дату</dt><dd>2026-10 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-conclusion" id="C072"><header><span class="cid">C072</span><span class="tag">вывод</span><span class="status">действует</span></header><p class="ctext">Удержание 52% на втором месяце у performance_ads нельзя считать аномалией канала: по бенчмаркам 2025 года удержание первого продления в подписочных приложениях обычно 50–85% (Adapty: 50% в США, RevenueCat: отток первого продления месячных планов 15–40%).</p><p class="note">Вывод: сделан из утверждений, на которые он опирается (см. ниже).</p><dl><dt>Опирается на</dt><dd><span class="cites"><a class="cite t-fact" href="#C025" data-c="C025">C025</a> <a class="cite t-fact" href="#C027" data-c="C027">C027</a> <a class="cite t-fact" href="#C070" data-c="C070">C070</a> <a class="cite t-fact" href="#C071" data-c="C071">C071</a></span></dd></dl></article>
+<article class="claim t-fact" id="C027"><header><span class="cid">C027</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В когорте канала performance_ads августа 2026 года 52,4% новых платящих семей оплатили следующий месяц.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S004 · q1_channels.txt<br>файл: <a href="analysis/q1_channels.txt">analysis/q1_channels.txt</a>; снимок <a href="sources/S004.md">sources/S004.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>ads_2026-08_m1_pct</dd><dt>Цитата</dt><dd><blockquote>«FIGURE ads_2026-08_m1_pct = 52.4 % | period 2026-08»</blockquote></dd><dt>На дату</dt><dd>2026-08 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-fact" id="C070"><header><span class="cid">C070</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">По данным отчёта RevenueCat State of Subscription Apps 2025, на месячных планах отток при первом продлении в 2025 году составлял 15–40%, то есть удержание первого продления — 60–85%.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S008 · State of Subscription Apps 2025 – RevenueCat<br>страница: <a href="https://www.revenuecat.com/state-of-subscription-apps-2025/">https://www.revenuecat.com/state-of-subscription-apps-2025/</a>; получен 2026-11-16</dd><dt>Где</dt><dd>Renewals</dd><dt>Цитата</dt><dd><blockquote>«The first renewal has the biggest impact, with 30-50% churn on weekly plans and 15-40% on monthly.»</blockquote></dd><dt>На дату</dt><dd>2025-03 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-fact" id="C071"><header><span class="cid">C071</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">По данным отчёта Adapty State of In-App Subscriptions 2025, в США в 2025 году первое продление оплачивали 50% платящих.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S009 · State of In-App Subscriptions 2025 | Adapty Report<br>страница: <a href="https://adapty.io/state-of-in-app-subscriptions-2025/">https://adapty.io/state-of-in-app-subscriptions-2025/</a>; получен 2026-11-16</dd><dt>Где</dt><dd>Conversion funnel in the US by renewal stage</dd><dt>Цитата</dt><dd><blockquote>«Paid → 1st renewal50%»</blockquote></dd><dt>На дату</dt><dd>2025-06 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-conclusion" id="C092"><header><span class="cid">C092</span><span class="tag">вывод</span><span class="status">действует</span></header><p class="ctext">Месячный отток вырос с 4% в апреле 2026 до 7,7% в августе–сентябре 2026.</p><p class="note">Вывод: сделан из утверждений, на которые он опирается (см. ниже).</p><dl><dt>Опирается на</dt><dd><span class="cites"><a class="cite t-fact" href="#C089" data-c="C089">C089</a> <a class="cite t-fact" href="#C090" data-c="C090">C090</a> <a class="cite t-fact" href="#C091" data-c="C091">C091</a></span></dd></dl></article>
+<article class="claim t-fact" id="C089"><header><span class="cid">C089</span><span class="tag">факт</span><span class="status bad">отозвано</span></header><p class="ctext">В апреле 2026 месячный отток «Семейного компаса» был 4% (по таблице metrics.xlsx, лист monthly).</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S001 · metrics.xlsx<br>файл: <a href="materials/metrics.xlsx">materials/metrics.xlsx</a>; снимок <a href="sources/S001.md">sources/S001.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>monthly!F7</dd><dt>Цитата</dt><dd><blockquote>«4»</blockquote></dd><dt>На дату</dt><dd>2026-04</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата не подтверждает утверждение (оценка: jev)</dd></dl></article>
+<article class="claim t-fact" id="C090"><header><span class="cid">C090</span><span class="tag">факт</span><span class="status bad">устарело</span></header><p class="ctext">В августе 2026 месячный отток составил 7,7%.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S001 · metrics.xlsx<br>файл: <a href="materials/metrics.xlsx">materials/metrics.xlsx</a>; снимок <a href="sources/S001.md">sources/S001.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>monthly!F11</dd><dt>Цитата</dt><dd><blockquote>«7.7»</blockquote></dd><dt>На дату</dt><dd>2026-08</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-fact" id="C091"><header><span class="cid">C091</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">В сентябре 2026 месячный отток составил 7,7%.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S001 · metrics.xlsx<br>файл: <a href="materials/metrics.xlsx">materials/metrics.xlsx</a>; снимок <a href="sources/S001.md">sources/S001.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>monthly!F12</dd><dt>Цитата</dt><dd><blockquote>«7.7»</blockquote></dd><dt>На дату</dt><dd>2026-09</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-fact" id="C031"><header><span class="cid">C031</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">За май–сентябрь 2026 года канал performance_ads дал 50,2% всех новых платящих семей.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S004 · q1_channels.txt<br>файл: <a href="analysis/q1_channels.txt">analysis/q1_channels.txt</a>; снимок <a href="sources/S004.md">sources/S004.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>ads_share_new_2026-05_2026-09</dd><dt>Цитата</dt><dd><blockquote>«FIGURE ads_share_new_2026-05_2026-09 = 50.2 % | period 2026-05..2026-09»</blockquote></dd><dt>На дату</dt><dd>2026-09 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-conclusion" id="C045"><header><span class="cid">C045</span><span class="tag">вывод</span><span class="status">действует</span></header><p class="ctext">Обращения из performance_ads в 2026 году говорят о несовпадении обещанного в рекламе с продуктом (не работает по номеру, «без установки») чаще, чем о приложении-компаньоне; но это темы обращений, а не причины отказа — прямых данных о причинах ухода нет.</p><p class="note">Вывод: сделан из утверждений, на которые он опирается (см. ниже).</p><dl><dt>Опирается на</dt><dd><span class="cites"><a class="cite t-fact" href="#C040" data-c="C040">C040</a> <a class="cite t-fact" href="#C041" data-c="C041">C041</a> <a class="cite t-fact" href="#C043" data-c="C043">C043</a> <a class="cite t-fact" href="#C044" data-c="C044">C044</a> <a class="cite t-gap as" href="#C014" data-c="C014">C014<span class="tag">пробел</span></a></span></dd></dl></article>
+<article class="claim t-fact" id="C043"><header><span class="cid">C043</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">За февраль–октябрь 2026 года в organic 25% обращений (2 из 8) касались приложения-компаньона.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S006 · q2_tickets.txt<br>файл: <a href="analysis/q2_tickets.txt">analysis/q2_tickets.txt</a>; снимок <a href="sources/S006.md">sources/S006.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>organic_tickets_companion_app_share</dd><dt>Цитата</dt><dd><blockquote>«FIGURE organic_tickets_companion_app_share = 25 % | period 2026-02..2026-10»</blockquote></dd><dt>На дату</dt><dd>2026-10 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-gap" id="C014"><header><span class="cid">C014</span><span class="tag">пробел</span><span class="status">действует</span></header><p class="ctext">Неизвестно, что говорят уходящие семьи performance_ads о причине отказа: относительно продукта, рекламы или онбординга.</p><p class="note">Данных нет: это известное неизвестное, а не факт.</p><dl></dl></article>
+<article class="claim t-assumption" id="C004"><header><span class="cid">C004</span><span class="tag">допущение</span><span class="status">действует</span></header><p class="ctext">По словам пользователя, к 10 декабря 2026 года нужно только решение; внедрение и первые результаты проверки — позже.</p><p class="note">Допущение: принято без проверки по источнику; если оно неверно, вывод может измениться.</p><dl></dl></article>
+<article class="claim t-fact" id="C009"><header><span class="cid">C009</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">Новый онбординг v2 выпущен 30 апреля 2026 года, со 2 мая его видят все новые пользователи: путь сокращён с 7 экранов до 4, а экран о приложении-компаньоне на телефоне ребёнка перенесён после оплаты.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S002 · product.docx<br>файл: <a href="materials/product.docx">materials/product.docx</a>; снимок <a href="sources/S002.md">sources/S002.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>Новый онбординг (v2)</dd><dt>Цитата</dt><dd><blockquote>«Выпущен 30 апреля 2026 года; со 2 мая его видят все новые пользователи. Сократили путь с 7 экранов до 4»</blockquote></dd><dt>На дату</dt><dd>2026-05 (закрытый период)</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+<article class="claim t-assumption" id="C105"><header><span class="cid">C105</span><span class="tag">допущение</span><span class="status">действует</span></header><p class="ctext">Целевое значение удержания второго месяца для performance_ads после исправления рекламы — 70-80%, что проверяется holdout-тестом.</p><p class="note">Допущение: принято без проверки по источнику; если оно неверно, вывод может измениться.</p><dl></dl></article>
+<article class="claim t-assumption" id="C106"><header><span class="cid">C106</span><span class="tag">допущение</span><span class="status">действует</span></header><p class="ctext">Период наблюдения — 2 месяца (январь-февраль 2027), что достаточно для измерения удержания второго месяца.</p><p class="note">Допущение: принято без проверки по источнику; если оно неверно, вывод может измениться.</p><dl></dl></article>
+<article class="claim t-hypothesis" id="C069"><header><span class="cid">C069</span><span class="tag">гипотеза</span><span class="status">действует</span></header><p class="ctext">Неоплаченные второй месяц семьи performance_ads расходятся по двум причинам: (1) несовпадение обещания рекламы с продуктом, (2) половина новых семей идёт через канал без приложения-компаньона, поэтому расхождение ожиданий может быть свойством трафика, а не обещания; различие проверит holdout с креативом без «без установки».</p><p class="note">Гипотеза: предположение, которое ещё проверяется; это не факт.</p><dl><dt>Опирается на</dt><dd><span class="cites"><a class="cite t-fact" href="#C040" data-c="C040">C040</a> <a class="cite t-fact" href="#C041" data-c="C041">C041</a> <a class="cite t-fact" href="#C044" data-c="C044">C044</a> <a class="cite t-conclusion" href="#C045" data-c="C045">C045<span class="tag">вывод</span></a></span></dd></dl></article>
+<article class="claim t-gap" id="C059"><header><span class="cid">C059</span><span class="tag">пробел</span><span class="status">действует</span></header><p class="ctext">Расчёт окупаемости занижает срок жизни: когорты мая–сентября 2026 года ещё не прожили полный срок, выплаты за октябрь 2026 и позже в расчёт не входят; себестоимость обслуживания и возвраты не учитываются.</p><p class="note">Данных нет: это известное неизвестное, а не факт.</p><dl></dl></article>
+<article class="claim t-gap" id="C016"><header><span class="cid">C016</span><span class="tag">пробел</span><span class="status">действует</span></header><p class="ctext">Неизвестно, какая доля оттока приходится на семьи, оставшиеся с онбордингом v2 в organic и referral, если убрать эффект канала.</p><p class="note">Данных нет: это известное неизвестное, а не факт.</p><dl></dl></article>
+<article class="claim t-assumption" id="C002"><header><span class="cid">C002</span><span class="tag">допущение</span><span class="status">действует</span></header><p class="ctext">По словам пользователя, откат онбординга v2 — один из вариантов наравне с другими, а не жёсткое требование.</p><p class="note">Допущение: принято без проверки по источнику; если оно неверно, вывод может измениться.</p><dl></dl></article>
+<article class="claim t-assumption" id="C003"><header><span class="cid">C003</span><span class="tag">допущение</span><span class="status">действует</span></header><p class="ctext">По словам пользователя, канал performance_ads можно приостановить или урезать.</p><p class="note">Допущение: принято без проверки по источнику; если оно неверно, вывод может измениться.</p><dl></dl></article>
+<article class="claim t-fact" id="C098"><header><span class="cid">C098</span><span class="tag">факт</span><span class="status">действует</span></header><p class="ctext">За май–сентябрь 2026 канал performance_ads дал 17 860 новых платящих семей.</p><p class="note">Факт: подтверждён цитатой из источника.</p><dl><dt>Источник</dt><dd>S004 · q1_channels.txt<br>файл: <a href="analysis/q1_channels.txt">analysis/q1_channels.txt</a>; снимок <a href="sources/S004.md">sources/S004.md</a>; получен 2026-11-16</dd><dt>Где</dt><dd>ads_new_paying_2026-05_2026-09</dd><dt>Цитата</dt><dd><blockquote>«17860 families»</blockquote></dd><dt>На дату</dt><dd>2026-09</dd><dt>Проверка</dt><dd>цитата найдена в снимке источника; цитата подтверждает утверждение (оценка: agent)</dd></dl></article>
+</section>
+<footer>Собрано командой <code>strat report</code> 2026-11-17 из memo.md, claims.jsonl и sources/index.jsonl. Работает без интернета: без сети текст показан системным шрифтом.</footer>
+</main>
+<div class="ccard" id="ccard" role="dialog" aria-modal="false" aria-labelledby="cc-id" tabindex="-1" hidden>
+<div class="cc-top"><span class="cc-id" id="cc-id"></span><span class="tag" id="cc-type"></span><span class="cc-status" id="cc-status"></span><button type="button" class="cc-x" id="cc-x" aria-label="Закрыть"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></div>
+<p class="cc-text" id="cc-text"></p>
+<div class="cc-src" id="cc-src"></div>
+<blockquote class="cc-quote" id="cc-quote" hidden></blockquote>
+<div class="cc-sup" id="cc-sup" hidden></div>
+</div>
+<script id="claims-data" type="application/json">{"claims": {"C101": {"id": "C101", "type": "assumption", "label": "допущение", "status": "", "text": "Руководитель выбирает Вариант 4: исправить обещание рекламы и проверить его holdout-тестом.", "source": null, "where": null, "quote": null, "note": "Допущение: принято без проверки по источнику; если оно неверно, вывод может измениться.", "supports": []}, "C085": {"id": "C085", "type": "conclusion", "label": "вывод", "status": "", "text": "Провал удержания второго месяца сосредоточен в канале performance_ads: около 52% против 89–94% в organic, referral и operator_bundle, а удержание старых каналов после онбординга v2 не изменилось (organic 89% против 90% до v2).", "source": null, "where": null, "quote": null, "note": "Вывод: сделан из утверждений, на которые он опирается (см. ниже).", "supports": ["C025", "C020", "C075", "C084"]}, "C025": {"id": "C025", "type": "fact", "label": "факт", "status": "отозвано", "text": "У когорт канала performance_ads мая–сентября 2026 года доля оплативших следующий месяц держалась на 51,7–52,4%: 52,1% в мае, 51,9% в июне, 52,3% в июле, 52,4% в августе, 51,7% в сентябре.", "source": "S004", "where": "ads_2026-05_m1_pct", "quote": "FIGURE ads_2026-05_m1_pct = 52.1 % | period 2026-05", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C020": {"id": "C020", "type": "fact", "label": "факт", "status": "", "text": "В мае–сентябре 2026 года доля новых платящих семей organic, оплативших следующий месяц, составила 89,0%.", "source": "S004", "where": "2026-05..2026-09_organic_m1_pct", "quote": "FIGURE 2026-05..2026-09_organic_m1_pct = 89 % | period 2026-05..2026-09", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C075": {"id": "C075", "type": "fact", "label": "факт", "status": "", "text": "В мае–сентябре 2026 года доля новых платящих семей organic, оплативших следующий месяц, составила 89%.", "source": "S004", "where": "2026-05..2026-09_organic_m1_pct", "quote": "FIGURE 2026-05..2026-09_organic_m1_pct = 89 % | period 2026-05..2026-09", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C084": {"id": "C084", "type": "fact", "label": "факт", "status": "устарело", "text": "В ноябре 2025 – апреле 2026 года доля новых платящих семей organic, оплативших следующий месяц, составила 90%.", "source": "S004", "where": "2025-11..2026-04_organic_m1_pct", "quote": "FIGURE 2025-11..2026-04_organic_m1_pct = 90 % | period 2025-11..2026-04", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C104": {"id": "C104", "type": "fact", "label": "факт", "status": "", "text": "В мае 2026 года в когорте канала performance_ads доля оплативших следующий месяц составила 52,1%.", "source": "S004", "where": "ads_2026-05_m1_pct", "quote": "FIGURE ads_2026-05_m1_pct = 52.1 % | period 2026-05", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C096": {"id": "C096", "type": "fact", "label": "факт", "status": "", "text": "В мае–сентябре 2026 года доля новых платящих семей organic, оплативших следующий месяц, составила 89%.", "source": "S004", "where": "2026-05..2026-09_organic_m1_pct", "quote": "89 %", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C022": {"id": "C022", "type": "fact", "label": "факт", "status": "", "text": "В мае–сентябре 2026 года доля новых платящих семей referral, оплативших следующий месяц, составила 91,6%.", "source": "S004", "where": "2026-05..2026-09_referral_m1_pct", "quote": "FIGURE 2026-05..2026-09_referral_m1_pct = 91.6 % | period 2026-05..2026-09", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C086": {"id": "C086", "type": "conclusion", "label": "вывод", "status": "", "text": "Канал performance_ads не окупает привлечение: к октябрю 2026 года семья из него приносит 581 ₽ выручки при 650 ₽ затрат (вклад -69 ₽), тогда как семья из остальных каналов — 992 ₽ при 200 ₽ (+792 ₽).", "source": null, "where": null, "quote": null, "note": "Вывод: сделан из утверждений, на которые он опирается (см. ниже).", "supports": ["C048", "C052", "C078", "C079"]}, "C048": {"id": "C048", "type": "fact", "label": "факт", "status": "", "text": "В расчёте на когортах мая–сентября 2026 года вклад семьи из performance_ads составил -69 ₽.", "source": "S007", "where": "ads_contribution_per_family_2026-05_2026-09", "quote": "FIGURE ads_contribution_per_family_2026-05_2026-09 = -69 RUB | period 2026-05..2026-09", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C052": {"id": "C052", "type": "fact", "label": "факт", "status": "", "text": "По расчёту на когортах мая–сентября 2026 года, стоимость привлечения семьи в performance_ads составила 650 ₽, в остальных каналах — 200 ₽.", "source": "S007", "where": "ads_cac_per_family, other_cac_per_family", "quote": "FIGURE ads_cac_per_family = 650 RUB | period 2026-05..2026-09 ... FIGURE other_cac_per_family = 200 RUB | period 2026-05..2026-09", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C078": {"id": "C078", "type": "fact", "label": "факт", "status": "", "text": "По расчёту на когортах мая–сентября 2026 года семья из performance_ads приносит 581 ₽ выручки за срок жизни.", "source": "S007", "where": "ads_revenue_per_family_2026-05_2026-09", "quote": "FIGURE ads_revenue_per_family_2026-05_2026-09 = 581 RUB | period 2026-05..2026-09", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C079": {"id": "C079", "type": "fact", "label": "факт", "status": "", "text": "По расчёту на когортах мая–сентября 2026 года семья из остальных каналов приносит вклад 792 ₽ за срок жизни.", "source": "S007", "where": "other_contribution_per_family_2026-05_2026-09", "quote": "FIGURE other_contribution_per_family_2026-05_2026-09 = 792 RUB | period 2026-05..2026-09", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C100": {"id": "C100", "type": "fact", "label": "факт", "status": "", "text": "Семьи когорты performance_ads августа 2026, не оплатившие второй месяц, составили 40,5% всех ушедших семей августа 2026.", "source": "S005", "where": "ads_lost_share_of_churned_2026-08", "quote": "40.5 %", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C097": {"id": "C097", "type": "fact", "label": "факт", "status": "", "text": "В ноябре 2025 – апреле 2026 года доля новых платящих семей organic, оплативших следующий месяц, составила 90%.", "source": "S004", "where": "2025-11..2026-04_organic_m1_pct", "quote": "90 %", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C040": {"id": "C040", "type": "fact", "label": "факт", "status": "", "text": "За февраль–октябрь 2026 года 6 из 17 обращений канала performance_ads (35,3%) — жалобы на несоответствие рекламе.", "source": "S006", "where": "ads_tickets_ads_mismatch_share", "quote": "FIGURE ads_tickets_ads_mismatch_share = 35.3 % | period 2026-02..2026-10", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C041": {"id": "C041", "type": "fact", "label": "факт", "status": "", "text": "За февраль–октябрь 2026 года 6 из 17 обращений канала performance_ads (35,3%) связаны с тем, что «не работает по номеру телефона».", "source": "S006", "where": "ads_tickets_no_number_lookup_share", "quote": "FIGURE ads_tickets_no_number_lookup_share = 35.3 % | period 2026-02..2026-10", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C044": {"id": "C044", "type": "fact", "label": "факт", "status": "", "text": "За февраль–октябрь 2026 года в канале performance_ads только 1 из 17 обращений (5,9%) касалось приложения-компаньона.", "source": "S006", "where": "ads_tickets_companion_app_share", "quote": "FIGURE ads_tickets_companion_app_share = 5.9 % | period 2026-02..2026-10", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C072": {"id": "C072", "type": "conclusion", "label": "вывод", "status": "", "text": "Удержание 52% на втором месяце у performance_ads нельзя считать аномалией канала: по бенчмаркам 2025 года удержание первого продления в подписочных приложениях обычно 50–85% (Adapty: 50% в США, RevenueCat: отток первого продления месячных планов 15–40%).", "source": null, "where": null, "quote": null, "note": "Вывод: сделан из утверждений, на которые он опирается (см. ниже).", "supports": ["C025", "C027", "C070", "C071"]}, "C027": {"id": "C027", "type": "fact", "label": "факт", "status": "", "text": "В когорте канала performance_ads августа 2026 года 52,4% новых платящих семей оплатили следующий месяц.", "source": "S004", "where": "ads_2026-08_m1_pct", "quote": "FIGURE ads_2026-08_m1_pct = 52.4 % | period 2026-08", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C070": {"id": "C070", "type": "fact", "label": "факт", "status": "", "text": "По данным отчёта RevenueCat State of Subscription Apps 2025, на месячных планах отток при первом продлении в 2025 году составлял 15–40%, то есть удержание первого продления — 60–85%.", "source": "S008", "where": "Renewals", "quote": "The first renewal has the biggest impact, with 30-50% churn on weekly plans and 15-40% on monthly.", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C071": {"id": "C071", "type": "fact", "label": "факт", "status": "", "text": "По данным отчёта Adapty State of In-App Subscriptions 2025, в США в 2025 году первое продление оплачивали 50% платящих.", "source": "S009", "where": "Conversion funnel in the US by renewal stage", "quote": "Paid → 1st renewal50%", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C092": {"id": "C092", "type": "conclusion", "label": "вывод", "status": "", "text": "Месячный отток вырос с 4% в апреле 2026 до 7,7% в августе–сентябре 2026.", "source": null, "where": null, "quote": null, "note": "Вывод: сделан из утверждений, на которые он опирается (см. ниже).", "supports": ["C089", "C090", "C091"]}, "C089": {"id": "C089", "type": "fact", "label": "факт", "status": "отозвано", "text": "В апреле 2026 месячный отток «Семейного компаса» был 4% (по таблице metrics.xlsx, лист monthly).", "source": "S001", "where": "monthly!F7", "quote": "4", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C090": {"id": "C090", "type": "fact", "label": "факт", "status": "устарело", "text": "В августе 2026 месячный отток составил 7,7%.", "source": "S001", "where": "monthly!F11", "quote": "7.7", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C091": {"id": "C091", "type": "fact", "label": "факт", "status": "", "text": "В сентябре 2026 месячный отток составил 7,7%.", "source": "S001", "where": "monthly!F12", "quote": "7.7", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C031": {"id": "C031", "type": "fact", "label": "факт", "status": "", "text": "За май–сентябрь 2026 года канал performance_ads дал 50,2% всех новых платящих семей.", "source": "S004", "where": "ads_share_new_2026-05_2026-09", "quote": "FIGURE ads_share_new_2026-05_2026-09 = 50.2 % | period 2026-05..2026-09", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C045": {"id": "C045", "type": "conclusion", "label": "вывод", "status": "", "text": "Обращения из performance_ads в 2026 году говорят о несовпадении обещанного в рекламе с продуктом (не работает по номеру, «без установки») чаще, чем о приложении-компаньоне; но это темы обращений, а не причины отказа — прямых данных о причинах ухода нет.", "source": null, "where": null, "quote": null, "note": "Вывод: сделан из утверждений, на которые он опирается (см. ниже).", "supports": ["C040", "C041", "C043", "C044", "C014"]}, "C043": {"id": "C043", "type": "fact", "label": "факт", "status": "", "text": "За февраль–октябрь 2026 года в organic 25% обращений (2 из 8) касались приложения-компаньона.", "source": "S006", "where": "organic_tickets_companion_app_share", "quote": "FIGURE organic_tickets_companion_app_share = 25 % | period 2026-02..2026-10", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C014": {"id": "C014", "type": "gap", "label": "пробел", "status": "", "text": "Неизвестно, что говорят уходящие семьи performance_ads о причине отказа: относительно продукта, рекламы или онбординга.", "source": null, "where": null, "quote": null, "note": "Данных нет: это известное неизвестное, а не факт.", "supports": []}, "C004": {"id": "C004", "type": "assumption", "label": "допущение", "status": "", "text": "По словам пользователя, к 10 декабря 2026 года нужно только решение; внедрение и первые результаты проверки — позже.", "source": null, "where": null, "quote": null, "note": "Допущение: принято без проверки по источнику; если оно неверно, вывод может измениться.", "supports": []}, "C009": {"id": "C009", "type": "fact", "label": "факт", "status": "", "text": "Новый онбординг v2 выпущен 30 апреля 2026 года, со 2 мая его видят все новые пользователи: путь сокращён с 7 экранов до 4, а экран о приложении-компаньоне на телефоне ребёнка перенесён после оплаты.", "source": "S002", "where": "Новый онбординг (v2)", "quote": "Выпущен 30 апреля 2026 года; со 2 мая его видят все новые пользователи. Сократили путь с 7 экранов до 4", "note": "Факт: подтверждён цитатой из источника.", "supports": []}, "C105": {"id": "C105", "type": "assumption", "label": "допущение", "status": "", "text": "Целевое значение удержания второго месяца для performance_ads после исправления рекламы — 70-80%, что проверяется holdout-тестом.", "source": null, "where": null, "quote": null, "note": "Допущение: принято без проверки по источнику; если оно неверно, вывод может измениться.", "supports": []}, "C106": {"id": "C106", "type": "assumption", "label": "допущение", "status": "", "text": "Период наблюдения — 2 месяца (январь-февраль 2027), что достаточно для измерения удержания второго месяца.", "source": null, "where": null, "quote": null, "note": "Допущение: принято без проверки по источнику; если оно неверно, вывод может измениться.", "supports": []}, "C069": {"id": "C069", "type": "hypothesis", "label": "гипотеза", "status": "", "text": "Неоплаченные второй месяц семьи performance_ads расходятся по двум причинам: (1) несовпадение обещания рекламы с продуктом, (2) половина новых семей идёт через канал без приложения-компаньона, поэтому расхождение ожиданий может быть свойством трафика, а не обещания; различие проверит holdout с креативом без «без установки».", "source": null, "where": null, "quote": null, "note": "Гипотеза: предположение, которое ещё проверяется; это не факт.", "supports": ["C040", "C041", "C044", "C045"]}, "C059": {"id": "C059", "type": "gap", "label": "пробел", "status": "", "text": "Расчёт окупаемости занижает срок жизни: когорты мая–сентября 2026 года ещё не прожили полный срок, выплаты за октябрь 2026 и позже в расчёт не входят; себестоимость обслуживания и возвраты не учитываются.", "source": null, "where": null, "quote": null, "note": "Данных нет: это известное неизвестное, а не факт.", "supports": []}, "C016": {"id": "C016", "type": "gap", "label": "пробел", "status": "", "text": "Неизвестно, какая доля оттока приходится на семьи, оставшиеся с онбордингом v2 в organic и referral, если убрать эффект канала.", "source": null, "where": null, "quote": null, "note": "Данных нет: это известное неизвестное, а не факт.", "supports": []}, "C002": {"id": "C002", "type": "assumption", "label": "допущение", "status": "", "text": "По словам пользователя, откат онбординга v2 — один из вариантов наравне с другими, а не жёсткое требование.", "source": null, "where": null, "quote": null, "note": "Допущение: принято без проверки по источнику; если оно неверно, вывод может измениться.", "supports": []}, "C003": {"id": "C003", "type": "assumption", "label": "допущение", "status": "", "text": "По словам пользователя, канал performance_ads можно приостановить или урезать.", "source": null, "where": null, "quote": null, "note": "Допущение: принято без проверки по источнику; если оно неверно, вывод может измениться.", "supports": []}, "C098": {"id": "C098", "type": "fact", "label": "факт", "status": "", "text": "За май–сентябрь 2026 канал performance_ads дал 17 860 новых платящих семей.", "source": "S004", "where": "ads_new_paying_2026-05_2026-09", "quote": "17860 families", "note": "Факт: подтверждён цитатой из источника.", "supports": []}}, "sources": {"S004": {"title": "q1_channels.txt", "kind": "analysis", "href": "analysis/q1_channels.txt", "download": true, "snap": "sources/S004.md"}, "S007": {"title": "q3_payback.txt", "kind": "analysis", "href": "analysis/q3_payback.txt", "download": true, "snap": "sources/S007.md"}, "S005": {"title": "q1_churn_mix.txt", "kind": "analysis", "href": "analysis/q1_churn_mix.txt", "download": true, "snap": "sources/S005.md"}, "S006": {"title": "q2_tickets.txt", "kind": "analysis", "href": "analysis/q2_tickets.txt", "download": true, "snap": "sources/S006.md"}, "S008": {"title": "State of Subscription Apps 2025 – RevenueCat", "kind": "web", "href": "https://www.revenuecat.com/state-of-subscription-apps-2025/", "download": false, "snap": "sources/S008.md"}, "S009": {"title": "State of In-App Subscriptions 2025 | Adapty Report", "kind": "web", "href": "https://adapty.io/state-of-in-app-subscriptions-2025/", "download": false, "snap": "sources/S009.md"}, "S001": {"title": "metrics.xlsx", "kind": "file", "href": "materials/metrics.xlsx", "download": true, "snap": "sources/S001.md"}, "S002": {"title": "product.docx", "kind": "file", "href": "materials/product.docx", "download": true, "snap": "sources/S002.md"}}}</script>
+<script>
+(function () {
+  var nav = document.querySelector(".type-filter");
+  if (!nav) return;
+  nav.hidden = false;
+  nav.addEventListener("click", function (e) {
+    var chip = e.target.closest && e.target.closest(".chip");
+    if (!chip) return;
+    var type = chip.getAttribute("data-type");
+    var on = document.body.getAttribute("data-filter") !== type;
+    nav.querySelectorAll(".chip").forEach(function (c) {
+      c.setAttribute("aria-pressed", String(on && c === chip));
+    });
+    if (on) document.body.setAttribute("data-filter", type);
+    else document.body.removeAttribute("data-filter");
+    document.querySelectorAll("main [data-types]").forEach(function (el) {
+      el.classList.toggle("hl", on && el.getAttribute("data-types").split(" ").indexOf(type) >= 0);
+    });
+  });
+})();
+(function () {
+  var data;
+  try { data = JSON.parse(document.getElementById("claims-data").textContent); } catch (e) { return; }
+  var card = document.getElementById("ccard");
+  var $ = function (id) { return document.getElementById(id); };
+  var last = null, timer = null;
+  function chip(id) {
+    var c = data.claims[id], a = document.createElement("a");
+    a.className = "cite" + (c && ["gap", "assumption", "hypothesis", "forecast", "synthetic"].indexOf(c.type) >= 0 ? " as" : "");
+    a.href = "#" + id; a.setAttribute("data-c", id); a.textContent = id;
+    return a;
+  }
+  function open(a) {
+    var c = data.claims[a.getAttribute("data-c")];
+    if (!c) return false;
+    if (!card.contains(a)) last = a;
+    clearTimeout(timer);
+    $("cc-id").textContent = c.id;
+    var t = $("cc-type"); t.textContent = c.label; t.className = "tag t-" + c.type;
+    $("cc-status").textContent = c.status || "";
+    $("cc-text").textContent = c.text;
+    var src = $("cc-src"), q = $("cc-quote"), sup = $("cc-sup");
+    src.replaceChildren();
+    var S = c.source && data.sources[c.source];
+    if (S) {
+      var l = document.createElement(S.href ? "a" : "span");
+      if (S.href) { l.href = S.href; if (S.download) l.setAttribute("download", ""); }
+      l.textContent = S.title;
+      src.append("Источник: ", l, " (" + c.source + ")");
+      if (S.snap) {
+        var s = document.createElement("a"); s.href = S.snap; s.textContent = "текст";
+        src.append(", ", s);
+      }
+      if (c.where) {
+        var w = document.createElement("div"); w.textContent = "Место: " + c.where; src.append(w);
+      }
+      if (c.type !== "fact" && c.note) {
+        var n = document.createElement("div"); n.textContent = c.note; src.append(n);
+      }
+    } else {
+      src.textContent = c.source ? "Источник: " + c.source : (c.note || "Без источника.");
+    }
+    q.textContent = c.quote || ""; q.hidden = !c.quote;
+    sup.replaceChildren();
+    sup.hidden = !(c.supports && c.supports.length);
+    if (!sup.hidden) {
+      sup.append("Опирается на: ");
+      c.supports.forEach(function (id) { sup.append(chip(id), " "); });
+    }
+    var r = a.getBoundingClientRect(), W = Math.min(380, innerWidth - 24);
+    card.style.width = W + "px";
+    card.style.left = Math.max(12, Math.min(r.left, innerWidth - W - 12)) + "px";
+    card.hidden = false;
+    var h = card.offsetHeight;
+    card.style.top = (r.bottom + 8 + h > innerHeight ? Math.max(12, r.top - h - 8) : r.bottom + 8) + "px";
+    requestAnimationFrame(function () { card.classList.add("on"); });
+    $("cc-x").focus({ preventScroll: true });
+    return true;
+  }
+  function close() {
+    if (card.hidden) return;
+    card.classList.remove("on");
+    timer = setTimeout(function () { card.hidden = true; }, 180);
+    if (last) last.focus({ preventScroll: true });
+  }
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest("a.cite, a.v");
+    if (a) {
+      if (a.classList.contains("v")) {
+        var id = (a.getAttribute("href") || "").slice(1);
+        if (!data.claims[id]) return;
+        a.setAttribute("data-c", id);
+      }
+      if (open(a)) e.preventDefault();
+      return;
+    }
+    if (!card.hidden && !card.contains(e.target)) close();
+  });
+  $("cc-x").addEventListener("click", close);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
+  addEventListener("scroll", close, { passive: true });
+})();
+</script>
+</body>
+</html>

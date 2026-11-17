@@ -807,3 +807,16 @@ def test_tool_call_markup_a_model_typed_as_text_is_cut_from_its_message():
     rec.agent("Tool: <function_response>\nx\n</function_response>", ts, "s", None)
     texts = [e["text"] for e in rec.events if e["kind"] == "agent"]
     assert texts == ["Попробую иначе."]
+
+
+def test_export_links_the_runs_memo_when_one_is_published_next_to_the_replay(tmp_path):
+    from strat.replay import link_memo
+    target = tmp_path / "demo" / "replay" / "script.json"
+    run = {"id": "glm-5.3-flash"}
+    link_memo(run, target)
+    assert "memo" not in run
+    memo = tmp_path / "demo" / "memos" / "glm-5.3-flash" / "memo.html"
+    memo.parent.mkdir(parents=True)
+    memo.write_text("<html></html>")
+    link_memo(run, target)
+    assert run["memo"] == "../memos/glm-5.3-flash/memo.html"

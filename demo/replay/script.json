@@ -5944,7 +5944,8 @@
      "kind": "web",
      "path": null
     }
-   ]
+   ],
+   "memo": "../memos/qwen-3.7-plus/memo.html"
   },
   {
    "id": "glm-5.3-flash",
@@ -10993,7 +10994,8 @@
      "kind": "web",
      "path": null
     }
-   ]
+   ],
+   "memo": "../memos/glm-5.3-flash/memo.html"
   },
   {
    "id": "deepseek-v4-flash",
@@ -15515,7 +15517,8 @@
      "kind": "web",
      "path": null
     }
-   ]
+   ],
+   "memo": "../memos/deepseek-v4-flash/memo.html"
   },
   {
    "id": "sample-opus",
