@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Use at stage plan or gate1. Drafts at least three options, builds the decision table, derives the research questions that could flip the choice, estimates cost, and presents Gate 1.
+description: Use at stage plan or gate1. Drafts at least three options, builds the decision table, derives the research questions that could flip the choice, and presents Gate 1.
 ---
 
 # Plan
@@ -33,8 +33,8 @@ ask which answers could change their ranking.
 
 - A question earns a place only if some answer would change the ranking in the table. Tie each
   to its cell ("вариант x критерий").
-- Rate impact (could it flip the leader?) and cost (local material: low; web page: medium;
-  needs new data: high). Order by impact, then cost.
+- Rate impact (could it flip the leader?) and effort (local material: low; web page: medium;
+  needs new data: high). Order by impact, then effort.
 - Name where the answer is likely to be (`где искать:`): a material by S id, a type of web page, a competitor.
 - Look wide. Read `skills/research/references/research-themes.md` and pick the themes that
   could change the choice here (market, competitors, analogues, benchmarks, users' voice,
@@ -44,10 +44,6 @@ ask which answers could change their ranking.
 - Write the stop rule: stop when no open question can change the ranking, or when the budget is
   spent; what is left becomes a gap.
 - Everything you decide not to research is listed under "Пробелы" as `gap` claims.
-- Cost estimate: the number of CLI calls that cost money (`strat search` 0.005-0.008 USD each, see `config/routes.yaml`; `strat judge` under
-  0.001 USD each;
-  `read` and `source add` are free) plus the IDE model's own tokens, which the CLI cannot see;
-  say so.
 - Log: `bin/strat step plan.plan --out plan.md`
 
 ## 4. Challenger on the draft options
@@ -66,7 +62,6 @@ ones. The gate check fails while any objection has no verdict.
    - the brief in 3-5 lines (decision, goal, recipient, deadline, constraints);
    - the draft options, one line each;
    - the top research questions with the cell each can flip;
-   - the cost and time estimate;
    - the challenger's objections (`bin/strat consult list`): what you accepted, what you
      rejected and why, and any open one; say if the challenger was same-vendor;
    - the assumptions the user should confirm.

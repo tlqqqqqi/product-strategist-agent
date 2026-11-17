@@ -14,7 +14,7 @@ This folder turns you, the IDE's agent, into a strategy analyst for the lead of 
 request + files
 intake (quick: <=5 questions | deep: <=10)        skills/intake
 draft options -> decision table -> research plan  skills/plan
-[GATE 1] brief, draft options, plan, estimated cost
+[GATE 1] brief, draft options, plan
 research: materials, web pages -> claims, gaps    skills/research, skills/materials
 options with objections and a recommendation      skills/options
 [GATE 2] picture, options, objections, load-bearing claims, recommendation
